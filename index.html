@@ -1,698 +1,638 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Financial Planning Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #111827; }
-    input { font-family: inherit; }
-    button { font-family: inherit; cursor: pointer; }
-    .hdr { background: linear-gradient(135deg,#1d4ed8,#4338ca); color: white; padding: 16px 24px; }
-    .hdr-inner { max-width: 1100px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-    .hdr h1 { font-size: 20px; font-weight: 700; }
-    .hdr p { font-size: 13px; color: #bfdbfe; margin-top: 2px; }
-    .hdr-stats { display: flex; gap: 24px; text-align: right; }
-    .hdr-stat p:first-child { font-size: 11px; color: #93c5fd; }
-    .hdr-stat p:last-child { font-size: 18px; font-weight: 700; }
-    .tabbar { background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 20; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .tabbar-inner { max-width: 1100px; margin: 0 auto; display: flex; }
-    .tabbar button { padding: 14px 22px; font-size: 13px; font-weight: 600; border: none; border-bottom: 2px solid transparent; color: #6b7280; background: none; transition: color .15s, border-color .15s; }
-    .tabbar button.active { border-color: #2563eb; color: #2563eb; }
-    .tabbar button:hover:not(.active) { color: #374151; }
-    .main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
-    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .full { grid-column: 1 / -1; }
-    .card { background: white; border-radius: 16px; border: 1px solid #e5e7eb; padding: 20px; }
-    .card-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 16px; }
-    .tile { border-radius: 16px; padding: 16px; }
-    .tile .t-label { font-size: 12px; font-weight: 500; opacity: .7; margin-bottom: 4px; }
-    .tile .t-value { font-size: 22px; font-weight: 700; }
-    .tile .t-sub { font-size: 11px; opacity: .6; margin-top: 2px; }
-    .tile-blue { background: #eff6ff; color: #1e40af; }
-    .tile-green { background: #f0fdf4; color: #166534; }
-    .tile-red { background: #fef2f2; color: #991b1b; }
-    .tile-orange { background: #fff7ed; color: #9a3412; }
-    .tile-purple { background: #faf5ff; color: #5b21b6; }
-    .tile-yellow { background: #fefce8; color: #854d0e; }
-    label.field { display: block; font-size: 12px; font-weight: 500; color: #4b5563; margin-bottom: 4px; }
-    .field-wrap { position: relative; margin-bottom: 12px; }
-    .field-wrap input { width: 100%; padding: 6px 10px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; }
-    .field-wrap input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
-    .field-wrap .sym { position: absolute; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 13px; pointer-events: none; }
-    .field-wrap .sym-l { left: 8px; }
-    .field-wrap .sym-r { right: 8px; }
-    .field-wrap .has-left { padding-left: 20px; }
-    .field-wrap .has-right { padding-right: 24px; }
-    .subtotal { display: flex; justify-content: space-between; font-size: 12px; padding-top: 8px; margin-top: 8px; border-top: 1px solid #f3f4f6; }
-    .subtotal.blue { color: #1d4ed8; font-weight: 600; }
-    .subtotal.red { color: #dc2626; font-weight: 600; }
-    .prop-box { background: #f9fafb; border-radius: 12px; padding: 14px; }
-    .equity-tag { font-size: 11px; color: #15803d; font-weight: 600; margin-top: 4px; }
-    .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #374151; }
-    .check-row input[type=checkbox] { width: 15px; height: 15px; accent-color: #2563eb; }
-    .prog-bar-bg { width: 100%; background: #f3f4f6; border-radius: 999px; height: 14px; overflow: hidden; margin-top: 6px; }
-    .prog-bar { height: 14px; border-radius: 999px; transition: width .5s; }
-    .row-split { display: flex; gap: 12px; }
-    .row-split > * { flex: 1; }
-    .inline4 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-    .detail-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f9fafb; }
-    .section-gap { margin-top: 16px; }
-    .chart-wrap { position: relative; }
-    .empty-state { text-align: center; padding: 64px 20px; }
-    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
-    .empty-state p { color: #6b7280; font-size: 16px; font-weight: 600; }
-    .empty-state small { color: #9ca3af; font-size: 13px; display: block; margin-top: 6px; }
-    .gap-note { font-size: 12px; color: #ef4444; margin-top: 8px; }
-    @media (max-width: 640px) {
-      .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
-      .hdr-stats { gap: 12px; }
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Financial Planning Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;font-size:14px}
+/* Header */
+.hdr{background:linear-gradient(135deg,#1d4ed8,#4338ca);color:#fff;padding:16px 24px}
+.hdr-inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.hdr h1{font-size:20px;font-weight:700}
+.hdr-sub{font-size:13px;color:#bfdbfe;margin-top:2px}
+.hdr-stats{display:flex;gap:20px;text-align:right}
+.hdr-stat .s-lbl{font-size:11px;color:#93c5fd}
+.hdr-stat .s-val{font-size:18px;font-weight:700}
+/* Tabs */
+.tabbar{background:#fff;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:20;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tabbar-inner{max-width:1100px;margin:0 auto;display:flex}
+.tab-btn{padding:14px 22px;font-size:13px;font-weight:600;border:none;border-bottom:2px solid transparent;color:#6b7280;background:none;cursor:pointer;transition:color .15s,border-color .15s;font-family:inherit}
+.tab-btn.active{border-color:#2563eb;color:#2563eb}
+.tab-btn:hover:not(.active){color:#374151}
+/* Layout */
+.main{max-width:1100px;margin:0 auto;padding:24px 16px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+.full{grid-column:1/-1}
+.gap{margin-top:16px}
+/* Cards */
+.card{background:#fff;border-radius:16px;border:1px solid #e5e7eb;padding:20px}
+.card-title{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px}
+/* Tiles */
+.tile{border-radius:16px;padding:16px}
+.tile .t-lbl{font-size:12px;font-weight:500;opacity:.7;margin-bottom:4px}
+.tile .t-val{font-size:22px;font-weight:700}
+.tile .t-sub{font-size:11px;opacity:.6;margin-top:2px}
+.tile-blue{background:#eff6ff;color:#1e40af}
+.tile-green{background:#f0fdf4;color:#166534}
+.tile-red{background:#fef2f2;color:#991b1b}
+.tile-orange{background:#fff7ed;color:#9a3412}
+.tile-purple{background:#faf5ff;color:#5b21b6}
+.tile-yellow{background:#fefce8;color:#854d0e}
+/* Form */
+.field-label{display:block;font-size:12px;font-weight:500;color:#4b5563;margin-bottom:4px}
+.field-wrap{position:relative;margin-bottom:12px}
+.field-wrap input{width:100%;padding:7px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:8px;outline:none;font-family:inherit;color:#111827}
+.field-wrap input:focus{border-color:#3b82f6;box-shadow:0 0 0 2px #bfdbfe}
+.field-wrap .sym{position:absolute;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px;pointer-events:none}
+.sym-l{left:8px}.sym-r{right:8px}
+.has-l{padding-left:20px!important}.has-r{padding-right:24px!important}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.subtotal{display:flex;justify-content:space-between;font-size:12px;font-weight:600;padding-top:8px;margin-top:4px;border-top:1px solid #f3f4f6}
+.subtotal.blue{color:#1d4ed8}.subtotal.red{color:#dc2626}
+/* Property / kid boxes */
+.inner-box{background:#f9fafb;border-radius:12px;padding:14px}
+.equity-tag{font-size:11px;color:#15803d;font-weight:600;margin-top:2px}
+.check-lbl{display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:600;color:#374151}
+.check-lbl input{width:15px;height:15px;accent-color:#2563eb;cursor:pointer}
+/* Detail rows */
+.drow{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #f9fafb}
+/* Progress bar */
+.prog-bg{width:100%;background:#f3f4f6;border-radius:999px;height:14px;overflow:hidden;margin-top:8px}
+.prog-fill{height:14px;border-radius:999px;transition:width .5s}
+.gap-note{font-size:12px;color:#ef4444;margin-top:8px}
+/* Empty state */
+.empty{text-align:center;padding:60px 20px}
+.empty .em{font-size:48px;margin-bottom:12px}
+.empty p{color:#6b7280;font-size:16px;font-weight:600}
+.empty small{color:#9ca3af;font-size:13px;display:block;margin-top:6px}
+@media(max-width:680px){
+  .grid3,.grid4{grid-template-columns:1fr 1fr}
+  .hdr-stats{gap:12px}
+  .tabbar-inner{overflow-x:auto}
+}
+</style>
 </head>
 <body>
-<div id="root"></div>
 
-<script type="text/babel">
-const { useState, useMemo, useRef, useEffect } = React;
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div>
+      <h1>Financial Planning Dashboard</h1>
+      <div class="hdr-sub" id="hdr-name">My Household</div>
+    </div>
+    <div class="hdr-stats">
+      <div class="hdr-stat"><div class="s-lbl">Net Worth</div><div class="s-val" id="hdr-nw">$0</div></div>
+      <div class="hdr-stat"><div class="s-lbl">Retire in</div><div class="s-val" id="hdr-yrs">0 yrs</div></div>
+      <div class="hdr-stat"><div class="s-lbl">Proj. Portfolio</div><div class="s-val" id="hdr-pp">$0</div></div>
+    </div>
+  </div>
+</div>
 
-// ── Formatters ───────────────────────────────────────────────────────────────
+<!-- Tabs -->
+<div class="tabbar">
+  <div class="tabbar-inner">
+    <button class="tab-btn active" data-tab="0">📋 Inputs</button>
+    <button class="tab-btn" data-tab="1">💰 Net Worth</button>
+    <button class="tab-btn" data-tab="2">🏖️ Retirement</button>
+    <button class="tab-btn" data-tab="3">🎓 College</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── TAB 0: INPUTS ─────────────────────────────────────────────────── -->
+  <div class="tab-panel active" id="panel-0">
+    <div class="grid2">
+
+      <div class="full card">
+        <div class="card-title">👤 Personal Information</div>
+        <div class="row2" style="grid-template-columns:repeat(3,1fr)">
+          <div><label class="field-label">Household / Name</label><div class="field-wrap"><input type="text" id="f-name" value="My Household"/></div></div>
+          <div><label class="field-label">Your Current Age</label><div class="field-wrap"><input type="number" id="f-age" value="38" min="18" max="85"/></div></div>
+          <div><label class="field-label">Target Retirement Age</label><div class="field-wrap"><input type="number" id="f-retage" value="65" min="45" max="90"/></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🏦 Cash & Equivalents</div>
+        <label class="field-label">Checking Account(s)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-chk" value="0" min="0"/></div>
+        <label class="field-label">Savings Account(s)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-sav" value="0" min="0"/></div>
+        <label class="field-label">Money Market / CDs / T-Bills</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-mkt" value="0" min="0"/></div>
+        <div class="subtotal blue"><span>Subtotal</span><span id="st-cash">$0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📈 Investment Accounts</div>
+        <label class="field-label">Taxable Brokerage</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-brok" value="0" min="0"/></div>
+        <label class="field-label">RSUs / Stock Options (vested)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rsu" value="0" min="0"/></div>
+        <label class="field-label">Crypto / Other</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-cry" value="0" min="0"/></div>
+        <div class="subtotal blue"><span>Subtotal</span><span id="st-inv">$0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🏖️ Retirement Accounts</div>
+        <div class="row2">
+          <div><label class="field-label">401(k)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-k1" value="0" min="0"/></div></div>
+          <div><label class="field-label">Roth 401(k)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rk" value="0" min="0"/></div></div>
+          <div><label class="field-label">Traditional IRA</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ir" value="0" min="0"/></div></div>
+          <div><label class="field-label">Roth IRA</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ri" value="0" min="0"/></div></div>
+          <div><label class="field-label">Pension (present value)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-pe" value="0" min="0"/></div></div>
+          <div><label class="field-label">Other Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ro" value="0" min="0"/></div></div>
+        </div>
+        <div class="subtotal blue"><span>Subtotal</span><span id="st-ret">$0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🚗 Other Assets</div>
+        <label class="field-label">Vehicles (estimated value)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-veh" value="0" min="0"/></div>
+        <label class="field-label">Other Assets (jewelry, business, etc.)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-oth" value="0" min="0"/></div>
+        <div class="subtotal blue"><span>Subtotal</span><span id="st-other">$0</span></div>
+      </div>
+
+      <div class="full card">
+        <div class="card-title">🏠 Real Estate</div>
+        <div class="grid2" id="prop-grid">
+          <!-- Properties injected by JS -->
+        </div>
+        <div class="subtotal blue"><span>Total Real Estate Value</span><span id="st-re">$0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💳 Liabilities (Non-Mortgage)</div>
+        <label class="field-label">Car Loan 1</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-cl1" value="0" min="0"/></div>
+        <label class="field-label">Car Loan 2</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-cl2" value="0" min="0"/></div>
+        <label class="field-label">Credit Card Debt</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-cc" value="0" min="0"/></div>
+        <label class="field-label">Student Loans</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-sl" value="0" min="0"/></div>
+        <label class="field-label">Other Debt</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-od" value="0" min="0"/></div>
+        <div class="subtotal red"><span>Total Non-Mortgage Debt</span><span id="st-liab-nm">$0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎯 Retirement Planning Inputs</div>
+        <label class="field-label">Annual Household Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-inc" value="120000" min="0"/></div>
+        <label class="field-label">Annual Amount Saved for Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ans" value="24000" min="0"/></div>
+        <label class="field-label">Desired Annual Retirement Income (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rin" value="90000" min="0"/></div>
+        <label class="field-label">Expected Monthly Social Security</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ss" value="2200" min="0"/></div>
+        <div class="row2">
+          <div><label class="field-label">Expected Annual Return</label><div class="field-wrap"><input type="number" class="has-r" id="f-rer" value="7" step="0.1" min="0" max="30"/><span class="sym sym-r">%</span></div></div>
+          <div><label class="field-label">Inflation Rate</label><div class="field-wrap"><input type="number" class="has-r" id="f-inf" value="3" step="0.1" min="0" max="20"/><span class="sym sym-r">%</span></div></div>
+        </div>
+      </div>
+
+      <div class="full card">
+        <div class="card-title">🎓 College Savings (529 Plans)</div>
+        <div class="grid2" id="kids-grid">
+          <!-- Kids injected by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── TAB 1: NET WORTH ──────────────────────────────────────────────── -->
+  <div class="tab-panel" id="panel-1">
+    <div class="grid3">
+      <div class="tile tile-blue"><div class="t-lbl">Total Assets</div><div class="t-val" id="nw-assets">$0</div></div>
+      <div class="tile tile-red"><div class="t-lbl">Total Liabilities</div><div class="t-val" id="nw-liab">$0</div></div>
+      <div class="tile tile-green" id="nw-tile"><div class="t-lbl">Net Worth</div><div class="t-val" id="nw-val">$0</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Asset Allocation</div>
+        <canvas id="chart-pie" height="260"></canvas>
+        <div id="pie-legend" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Assets vs. Liabilities</div>
+        <canvas id="chart-bar" height="220"></canvas>
+        <div style="margin-top:16px">
+          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:8px">Liability Breakdown</div>
+          <div id="liab-breakdown"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card gap" id="re-detail-card" style="display:none">
+      <div class="card-title">Real Estate Detail</div>
+      <div class="grid2" id="re-detail-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── TAB 2: RETIREMENT ─────────────────────────────────────────────── -->
+  <div class="tab-panel" id="panel-2">
+    <div class="grid4">
+      <div class="tile tile-blue"><div class="t-lbl">Years to Retirement</div><div class="t-val" id="ret-yrs">0</div></div>
+      <div class="tile tile-purple"><div class="t-lbl">Projected Portfolio</div><div class="t-val" id="ret-pp">$0</div></div>
+      <div class="tile tile-yellow"><div class="t-lbl">Target (4% rule)</div><div class="t-val" id="ret-tgt">$0</div></div>
+      <div class="tile tile-green" id="ret-gap-tile">
+        <div class="t-lbl" id="ret-gap-lbl">Projected Surplus</div>
+        <div class="t-val" id="ret-gap-val">$0</div>
+        <div class="t-sub" id="ret-gap-sub">You're on track 🎉</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Portfolio Growth to Retirement</div><canvas id="chart-line1" height="240"></canvas></div>
+      <div class="card"><div class="card-title">Portfolio Drawdown in Retirement (30 yrs)</div><canvas id="chart-line2" height="240"></canvas></div>
+    </div>
+    <div class="card gap">
+      <div class="card-title">Retirement Income Analysis</div>
+      <div class="grid4">
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Desired Annual Income</div><div style="font-size:22px;font-weight:700" id="ret-inc-desired">$0</div><div style="font-size:11px;color:#9ca3af">in today's dollars</div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Social Security (annual)</div><div style="font-size:22px;font-weight:700" id="ret-inc-ss">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-ss-mo"></div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Needed from Portfolio</div><div style="font-size:22px;font-weight:700" id="ret-inc-needed">$0</div><div style="font-size:11px;color:#9ca3af">annually (4% rule)</div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Savings Rate</div><div style="font-size:22px;font-weight:700" id="ret-savrate">0%</div><div style="font-size:11px;color:#9ca3af" id="ret-savamt"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 3: COLLEGE ────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="panel-3">
+    <div id="college-summary-tiles" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px"></div>
+    <div id="college-cards"></div>
+    <div class="card empty" id="college-empty">
+      <div class="em">🎓</div>
+      <p>No children added yet</p>
+      <small>Go to the Inputs tab → College Savings and enable children</small>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── Utilities ────────────────────────────────────────────────────────────────
 const fmt  = v => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v||0);
 const fmtS = v => {
-  if (!v && v!==0) return '$0';
-  const a = Math.abs(v);
-  if (a>=1e6) return (v<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M';
-  if (a>=1e3) return (v<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K';
+  const a = Math.abs(v||0);
+  if(a>=1e6) return (v<0?'-':'')+'$'+(a/1e6).toFixed(1)+'M';
+  if(a>=1e3) return (v<0?'-':'')+'$'+(a/1e3).toFixed(0)+'K';
   return (v<0?'-':'')+'$'+Math.round(a);
 };
+const $  = id => document.getElementById(id);
+const n  = id => parseFloat($(id)?.value)||0;
 const COLORS = ['#2563eb','#16a34a','#d97706','#7c3aed','#0891b2','#dc2626'];
 
-// ── Chart Components (Chart.js via useRef) ───────────────────────────────────
-function LineChartC({ datasets, labels, height=240 }) {
-  const ref = useRef(null);
-  const inst = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    if (inst.current) inst.current.destroy();
-    inst.current = new Chart(ref.current, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: datasets.map(d => ({
-          label: d.label,
-          data: d.data,
-          borderColor: d.color,
-          backgroundColor: 'transparent',
-          borderWidth: 2.5,
-          pointRadius: 0,
-          tension: 0.3,
-          borderDash: d.dashed ? [6,3] : undefined,
-        }))
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 } } } },
-        scales: {
-          y: { ticks: { callback: v => fmtS(v), font: { size: 11 } }, grid: { color: '#f0f0f0' } },
-          x: { ticks: { maxTicksLimit: 8, font: { size: 11 } }, grid: { display: false } }
-        }
-      }
-    });
-    return () => inst.current && inst.current.destroy();
-  }, [JSON.stringify(datasets), JSON.stringify(labels)]);
-  return <canvas ref={ref} height={height} />;
+// ── State ────────────────────────────────────────────────────────────────────
+const props = [
+  {name:'Primary Home',val:0,mort:0},
+  {name:'',val:0,mort:0},
+  {name:'',val:0,mort:0}
+];
+const kids = [
+  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
+  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
+  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
+  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4}
+];
+
+// ── Build dynamic HTML sections ──────────────────────────────────────────────
+function buildProps(){
+  const g = $('prop-grid');
+  g.innerHTML = '';
+  props.forEach((p,i) => {
+    const d = document.createElement('div');
+    d.className = 'inner-box';
+    d.innerHTML = `
+      <label class="field-label">Property ${i+1} Name</label>
+      <div class="field-wrap"><input type="text" id="p${i}-name" value="${p.name}" placeholder="${i===0?'Primary Home':'Property '+(i+1)}"/></div>
+      <label class="field-label">Estimated Market Value</label>
+      <div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="p${i}-val" value="${p.val}" min="0"/></div>
+      <label class="field-label">Mortgage Balance</label>
+      <div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="p${i}-mort" value="${p.mort}" min="0"/></div>
+      <div class="equity-tag" id="p${i}-eq"></div>`;
+    g.appendChild(d);
+    $(`p${i}-name`).addEventListener('input', e => { props[i].name=e.target.value; recalc(); });
+    $(`p${i}-val`).addEventListener('input',  e => { props[i].val=parseFloat(e.target.value)||0; recalc(); });
+    $(`p${i}-mort`).addEventListener('input', e => { props[i].mort=parseFloat(e.target.value)||0; recalc(); });
+  });
 }
 
-function BarChartC({ labels, values, colors, height=220 }) {
-  const ref = useRef(null);
-  const inst = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    if (inst.current) inst.current.destroy();
-    inst.current = new Chart(ref.current, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{ data: values, backgroundColor: colors, borderRadius: 8, borderSkipped: false }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
-        scales: {
-          y: { ticks: { callback: v => fmtS(v), font: { size: 11 } }, grid: { color: '#f0f0f0' } },
-          x: { ticks: { font: { size: 12 } }, grid: { display: false } }
-        }
-      }
-    });
-    return () => inst.current && inst.current.destroy();
-  }, [JSON.stringify(values), JSON.stringify(labels)]);
-  return <canvas ref={ref} height={height} />;
-}
-
-function DonutChartC({ data, height=220 }) {
-  const ref = useRef(null);
-  const inst = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    if (inst.current) inst.current.destroy();
-    inst.current = new Chart(ref.current, {
-      type: 'doughnut',
-      data: {
-        labels: data.map(d => d.name),
-        datasets: [{ data: data.map(d => d.value), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 }, generateLabels: chart => {
-            const ds = chart.data.datasets[0];
-            return chart.data.labels.map((l, i) => ({
-              text: `${l}: ${fmtS(ds.data[i])}`,
-              fillStyle: ds.backgroundColor[i],
-              strokeStyle: '#fff',
-              hidden: false, index: i
-            }));
-          }}},
-          tooltip: { callbacks: { label: c => fmt(c.raw) } }
-        }
-      }
-    });
-    return () => inst.current && inst.current.destroy();
-  }, [JSON.stringify(data)]);
-  return <canvas ref={ref} height={height} />;
-}
-
-// ── Input Helpers ────────────────────────────────────────────────────────────
-const F = ({ label, children }) => (
-  <div>
-    <label className="field">{label}</label>
-    {children}
-  </div>
-);
-const Cur = ({ label, value, onChange }) => (
-  <F label={label}>
-    <div className="field-wrap">
-      <span className="sym sym-l">$</span>
-      <input type="number" min="0" className="has-left" value={value||''} placeholder="0"
-        onChange={e => onChange(parseFloat(e.target.value)||0)} />
-    </div>
-  </F>
-);
-const Pct = ({ label, value, onChange }) => (
-  <F label={label}>
-    <div className="field-wrap">
-      <input type="number" step="0.1" className="has-right" value={value||''} placeholder="0"
-        onChange={e => onChange(parseFloat(e.target.value)||0)} />
-      <span className="sym sym-r">%</span>
-    </div>
-  </F>
-);
-const Num = ({ label, value, onChange, min, max }) => (
-  <F label={label}>
-    <div className="field-wrap">
-      <input type="number" value={value||''} min={min} max={max}
-        onChange={e => onChange(parseFloat(e.target.value)||0)} />
-    </div>
-  </F>
-);
-const Txt = ({ label, value, onChange, placeholder }) => (
-  <F label={label}>
-    <div className="field-wrap">
-      <input type="text" value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} />
-    </div>
-  </F>
-);
-const Sub = ({ label, value, red }) => (
-  <div className={`subtotal ${red?'red':'blue'}`}><span>{label}</span><span>{fmt(value)}</span></div>
-);
-const Tile = ({ label, value, sub, cls }) => (
-  <div className={`tile ${cls}`}>
-    <div className="t-label">{label}</div>
-    <div className="t-value">{value}</div>
-    {sub && <div className="t-sub">{sub}</div>}
-  </div>
-);
-
-// ── App ──────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab] = useState(0);
-
-  // Personal
-  const [name, setName]     = useState('My Household');
-  const [age, setAge]       = useState(38);
-  const [retAge, setRetAge] = useState(65);
-
-  // Cash
-  const [chk, setChk]   = useState(0);
-  const [sav, setSav]   = useState(0);
-  const [mkt, setMkt]   = useState(0);
-
-  // Investments
-  const [brok, setBrok] = useState(0);
-  const [rsu, setRsu]   = useState(0);
-  const [cry, setCry]   = useState(0);
-
-  // Retirement accounts
-  const [k1, setK1]     = useState(0);
-  const [rk, setRk]     = useState(0);
-  const [ir, setIr]     = useState(0);
-  const [ri, setRi]     = useState(0);
-  const [pe, setPe]     = useState(0);
-  const [ro, setRo]     = useState(0);
-
-  // Real estate
-  const [props, setProps] = useState([
-    {name:'Primary Home', val:0, mort:0},
-    {name:'', val:0, mort:0},
-    {name:'', val:0, mort:0},
-  ]);
-  const upP = (i,f,v) => setProps(p => p.map((x,j) => j===i?{...x,[f]:v}:x));
-
-  // Other
-  const [veh, setVeh] = useState(0);
-  const [oth, setOth] = useState(0);
-
-  // Liabilities
-  const [cl1, setCl1] = useState(0);
-  const [cl2, setCl2] = useState(0);
-  const [cc, setCc]   = useState(0);
-  const [sl, setSl]   = useState(0);
-  const [od, setOd]   = useState(0);
-
-  // Retirement inputs
-  const [inc, setInc]   = useState(120000);
-  const [ans, setAns]   = useState(24000);
-  const [rer, setRer]   = useState(7);
-  const [inf, setInf]   = useState(3);
-  const [rin, setRin]   = useState(90000);
-  const [ss, setSs]     = useState(2200);
-
-  // Kids
-  const [kids, setKids] = useState([
-    {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-    {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-    {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-    {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-  ]);
-  const upK = (i,f,v) => setKids(k => k.map((x,j) => j===i?{...x,[f]:v}:x));
-
-  const c = useMemo(() => {
-    const cash = chk+sav+mkt;
-    const inv  = brok+rsu+cry;
-    const ret  = k1+rk+ir+ri+pe+ro;
-    const reV  = props.reduce((s,p) => s+p.val, 0);
-    const reM  = props.reduce((s,p) => s+p.mort, 0);
-    const otA  = veh+oth;
-    const totA = cash+inv+ret+reV+otA;
-    const totL = reM+cl1+cl2+cc+sl+od;
-    const nw   = totA-totL;
-
-    const pie  = [{name:'Cash',value:cash},{name:'Investments',value:inv},
-                  {name:'Retirement',value:ret},{name:'Real Estate',value:reV},
-                  {name:'Other',value:otA}].filter(x=>x.value>0);
-
-    const yrs  = Math.max(0, retAge-age);
-    const r    = rer/100;
-    const i2   = inf/100;
-    const tgt  = Math.max(0, rin-ss*12)/0.04;
-    let port   = ret+inv;
-    const rc   = [], rl = [];
-    for (let y=0; y<=yrs; y++) {
-      rc.push({age:age+y, portfolio:Math.round(port), target:Math.round(tgt)});
-      rl.push(age+y);
-      port = port*(1+r)+ans;
-    }
-    const pp  = rc[rc.length-1]?.portfolio||0;
-    const gap = pp-tgt;
-
-    const wd  = Math.max(0, rin-ss*12);
-    let pv    = pp;
-    const pc  = [], pl = [];
-    for (let y=0; y<=30; y++) {
-      pc.push(Math.max(0,Math.round(pv)));
-      pl.push(retAge+y);
-      pv = pv*(1+r)-wd*Math.pow(1+i2,y);
-    }
-
-    const coll = kids.map(kid => {
-      if (!kid.on||!kid.name) return null;
-      const ytc = Math.max(0,18-kid.age);
-      let b = kid.bal;
-      for (let y=0;y<ytc;y++) b = b*1.06+kid.mo*12;
-      const fc = kid.cost*Math.pow(1+i2,ytc)*kid.yrs;
-      const pct = fc>0?Math.min(100,Math.round(b/fc*100)):100;
-      return {name:kid.name,age:kid.age,ytc,proj:Math.round(b),cost:Math.round(fc),gap:Math.round(b-fc),pct};
-    }).filter(Boolean);
-
-    return {cash,inv,ret,reV,reM,otA,totA,totL,nw,pie,rc,rl,pp,tgt,gap,pc,pl,coll,yrs};
-  }, [chk,sav,mkt,brok,rsu,cry,k1,rk,ir,ri,pe,ro,props,veh,oth,cl1,cl2,cc,sl,od,age,retAge,ans,rer,inf,rin,ss,kids]);
-
-  const TABS = ['📋 Inputs','💰 Net Worth','🏖️ Retirement','🎓 College'];
-
-  return (
-    <div>
-      {/* Header */}
-      <div className="hdr">
-        <div className="hdr-inner">
-          <div>
-            <h1>Financial Planning Dashboard</h1>
-            <p>{name}</p>
-          </div>
-          <div className="hdr-stats">
-            <div className="hdr-stat"><p>Net Worth</p><p style={{color:c.nw>=0?'white':'#fca5a5'}}>{fmtS(c.nw)}</p></div>
-            <div className="hdr-stat"><p>Retire in</p><p>{c.yrs} yrs</p></div>
-            <div className="hdr-stat"><p>Proj. Portfolio</p><p>{fmtS(c.pp)}</p></div>
-          </div>
+function buildKids(){
+  const g = $('kids-grid');
+  g.innerHTML = '';
+  kids.forEach((k,i) => {
+    const d = document.createElement('div');
+    d.className = 'inner-box';
+    d.id = `kid-box-${i}`;
+    d.innerHTML = `
+      <label class="check-lbl">
+        <input type="checkbox" id="k${i}-on" ${k.on?'checked':''}/> Child ${i+1}${k.name?' — '+k.name:''}
+      </label>
+      <div id="k${i}-fields" style="display:${k.on?'block':'none'}">
+        <div class="row2">
+          <div><label class="field-label">Name</label><div class="field-wrap"><input type="text" id="k${i}-name" value="${k.name}" placeholder="Name"/></div></div>
+          <div><label class="field-label">Age</label><div class="field-wrap"><input type="number" id="k${i}-age" value="${k.age}" min="0" max="17"/></div></div>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="tabbar">
-        <div className="tabbar-inner">
-          {TABS.map((t,i) => (
-            <button key={i} className={tab===i?'active':''} onClick={()=>setTab(i)}>{t}</button>
-          ))}
+        <div class="row2">
+          <div><label class="field-label">529 Balance</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-bal" value="${k.bal}" min="0"/></div></div>
+          <div><label class="field-label">Monthly Contrib.</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-mo" value="${k.mo}" min="0"/></div></div>
         </div>
-      </div>
+        <div class="row2">
+          <div><label class="field-label">Annual Cost (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-cost" value="${k.cost}" min="0"/></div></div>
+          <div><label class="field-label">Years of College</label><div class="field-wrap"><input type="number" id="k${i}-yrs" value="${k.yrs}" min="1" max="6"/></div></div>
+        </div>
+      </div>`;
+    g.appendChild(d);
 
-      <div className="main">
-
-        {/* ── INPUTS ─────────────────────────────────────────────────────── */}
-        {tab===0 && (
-          <div className="grid2">
-
-            <div className="full">
-              <div className="card">
-                <div className="card-title">👤 Personal Information</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px'}}>
-                  <Txt label="Household / Name" value={name} onChange={setName} placeholder="My Household" />
-                  <Num label="Your Current Age" value={age} onChange={setAge} min={18} max={85} />
-                  <Num label="Target Retirement Age" value={retAge} onChange={setRetAge} min={45} max={90} />
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-title">🏦 Cash & Equivalents</div>
-              <Cur label="Checking Account(s)" value={chk} onChange={setChk} />
-              <Cur label="Savings Account(s)" value={sav} onChange={setSav} />
-              <Cur label="Money Market / CDs / T-Bills" value={mkt} onChange={setMkt} />
-              <Sub label="Subtotal" value={c.cash} />
-            </div>
-
-            <div className="card">
-              <div className="card-title">📈 Investment Accounts</div>
-              <Cur label="Taxable Brokerage" value={brok} onChange={setBrok} />
-              <Cur label="RSUs / Stock Options (vested)" value={rsu} onChange={setRsu} />
-              <Cur label="Crypto / Other" value={cry} onChange={setCry} />
-              <Sub label="Subtotal" value={c.inv} />
-            </div>
-
-            <div className="card">
-              <div className="card-title">🏖️ Retirement Accounts</div>
-              <div className="inline4">
-                <Cur label="401(k)" value={k1} onChange={setK1} />
-                <Cur label="Roth 401(k)" value={rk} onChange={setRk} />
-                <Cur label="Traditional IRA" value={ir} onChange={setIr} />
-                <Cur label="Roth IRA" value={ri} onChange={setRi} />
-                <Cur label="Pension (PV)" value={pe} onChange={setPe} />
-                <Cur label="Other Retirement" value={ro} onChange={setRo} />
-              </div>
-              <Sub label="Subtotal" value={c.ret} />
-            </div>
-
-            <div className="card">
-              <div className="card-title">🚗 Other Assets</div>
-              <Cur label="Vehicles (estimated value)" value={veh} onChange={setVeh} />
-              <Cur label="Other Assets (jewelry, business, etc.)" value={oth} onChange={setOth} />
-              <Sub label="Subtotal" value={c.otA} />
-            </div>
-
-            <div className="full card">
-              <div className="card-title">🏠 Real Estate</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'14px'}}>
-                {props.map((p,i) => (
-                  <div className="prop-box" key={i}>
-                    <Txt label={`Property ${i+1} Name`} value={p.name} onChange={v=>upP(i,'name',v)} placeholder={i===0?'Primary Home':`Property ${i+1}`} />
-                    <Cur label="Estimated Market Value" value={p.val} onChange={v=>upP(i,'val',v)} />
-                    <Cur label="Mortgage Balance" value={p.mort} onChange={v=>upP(i,'mort',v)} />
-                    {p.val>0 && <div className="equity-tag">Equity: {fmt(p.val-p.mort)}</div>}
-                  </div>
-                ))}
-              </div>
-              <Sub label="Total Real Estate Value" value={c.reV} />
-            </div>
-
-            <div className="card">
-              <div className="card-title">💳 Liabilities (Non-Mortgage)</div>
-              <Cur label="Car Loan 1" value={cl1} onChange={setCl1} />
-              <Cur label="Car Loan 2" value={cl2} onChange={setCl2} />
-              <Cur label="Credit Card Debt" value={cc} onChange={setCc} />
-              <Cur label="Student Loans" value={sl} onChange={setSl} />
-              <Cur label="Other Debt" value={od} onChange={setOd} />
-              <Sub label="Total Non-Mortgage Debt" value={c.totL-c.reM} red={true} />
-            </div>
-
-            <div className="card">
-              <div className="card-title">🎯 Retirement Planning Inputs</div>
-              <Cur label="Annual Household Income" value={inc} onChange={setInc} />
-              <Cur label="Annual Amount Saved for Retirement" value={ans} onChange={setAns} />
-              <Cur label="Desired Annual Retirement Income (today's $)" value={rin} onChange={setRin} />
-              <Cur label="Expected Monthly Social Security" value={ss} onChange={setSs} />
-              <div className="row-split">
-                <Pct label="Expected Annual Return" value={rer} onChange={setRer} />
-                <Pct label="Inflation Rate" value={inf} onChange={setInf} />
-              </div>
-            </div>
-
-            <div className="full card">
-              <div className="card-title">🎓 College Savings (529 Plans)</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:'14px'}}>
-                {kids.map((kid,i) => (
-                  <div className="prop-box" key={i}>
-                    <label className="check-row">
-                      <input type="checkbox" checked={kid.on} onChange={e=>upK(i,'on',e.target.checked)} />
-                      Child {i+1}{kid.name?` — ${kid.name}`:''}
-                    </label>
-                    {kid.on && <>
-                      <div className="row-split">
-                        <Txt label="Name" value={kid.name} onChange={v=>upK(i,'name',v)} placeholder="Name" />
-                        <Num label="Age" value={kid.age} onChange={v=>upK(i,'age',v)} min={0} max={17} />
-                      </div>
-                      <div className="row-split">
-                        <Cur label="529 Balance" value={kid.bal} onChange={v=>upK(i,'bal',v)} />
-                        <Cur label="Monthly Contrib." value={kid.mo} onChange={v=>upK(i,'mo',v)} />
-                      </div>
-                      <div className="row-split">
-                        <Cur label="Annual Cost (today's $)" value={kid.cost} onChange={v=>upK(i,'cost',v)} />
-                        <Num label="Years of College" value={kid.yrs} onChange={v=>upK(i,'yrs',v)} min={1} max={6} />
-                      </div>
-                    </>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ── NET WORTH ───────────────────────────────────────────────────── */}
-        {tab===1 && (
-          <div>
-            <div className="grid3" style={{marginBottom:'16px'}}>
-              <Tile label="Total Assets" value={fmt(c.totA)} cls="tile-blue" />
-              <Tile label="Total Liabilities" value={fmt(c.totL)} cls="tile-red" />
-              <Tile label="Net Worth" value={fmt(c.nw)} cls={c.nw>=0?'tile-green':'tile-orange'} />
-            </div>
-
-            <div className="grid2">
-              <div className="card">
-                <div className="card-title">Asset Allocation</div>
-                {c.pie.length>0
-                  ? <DonutChartC data={c.pie} height={280} />
-                  : <div className="empty-state"><p>Enter values on the Inputs tab</p></div>
-                }
-              </div>
-
-              <div className="card">
-                <div className="card-title">Assets vs. Liabilities</div>
-                <BarChartC
-                  labels={['Assets','Liabilities','Net Worth']}
-                  values={[c.totA, c.totL, c.nw]}
-                  colors={['#2563eb','#dc2626', c.nw>=0?'#16a34a':'#f97316']}
-                  height={220}
-                />
-                <div style={{marginTop:'16px'}}>
-                  <div style={{fontSize:'11px',fontWeight:'700',color:'#6b7280',textTransform:'uppercase',marginBottom:'8px'}}>Liability Breakdown</div>
-                  {[
-                    {l:'Mortgages',v:c.reM},
-                    {l:'Car Loans',v:cl1+cl2},
-                    {l:'Credit Cards',v:cc},
-                    {l:'Student Loans',v:sl},
-                    {l:'Other Debt',v:od},
-                  ].filter(x=>x.v>0).map((x,i)=>(
-                    <div className="detail-row" key={i}>
-                      <span style={{color:'#6b7280'}}>{x.l}</span>
-                      <span style={{color:'#dc2626',fontWeight:'600'}}>{fmt(x.v)}</span>
-                    </div>
-                  ))}
-                  {c.totL===0 && <p style={{fontSize:'12px',color:'#9ca3af'}}>No liabilities entered</p>}
-                </div>
-              </div>
-            </div>
-
-            {c.reV>0 && (
-              <div className="card section-gap">
-                <div className="card-title">Real Estate Detail</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'12px'}}>
-                  {props.filter(p=>p.val>0).map((p,i)=>(
-                    <div className="prop-box" key={i}>
-                      <div style={{fontWeight:'700',fontSize:'14px',marginBottom:'8px'}}>{p.name||`Property ${i+1}`}</div>
-                      <div className="detail-row"><span style={{color:'#6b7280'}}>Value</span><span style={{fontWeight:'600'}}>{fmt(p.val)}</span></div>
-                      <div className="detail-row"><span style={{color:'#6b7280'}}>Mortgage</span><span style={{color:'#dc2626',fontWeight:'600'}}>{fmt(p.mort)}</span></div>
-                      <div style={{display:'flex',justifyContent:'space-between',fontSize:'13px',paddingTop:'6px',marginTop:'4px',borderTop:'1px solid #e5e7eb'}}>
-                        <span style={{fontWeight:'700'}}>Equity</span>
-                        <span style={{color:'#15803d',fontWeight:'700'}}>{fmt(p.val-p.mort)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── RETIREMENT ──────────────────────────────────────────────────── */}
-        {tab===2 && (
-          <div>
-            <div className="grid4" style={{marginBottom:'16px'}}>
-              <Tile label="Years to Retirement" value={c.yrs} cls="tile-blue" />
-              <Tile label="Projected Portfolio" value={fmtS(c.pp)} cls="tile-purple" />
-              <Tile label="Target (4% rule)" value={fmtS(c.tgt)} cls="tile-yellow" />
-              <Tile
-                label={c.gap>=0?'Projected Surplus':'Projected Shortfall'}
-                value={fmtS(Math.abs(c.gap))}
-                cls={c.gap>=0?'tile-green':'tile-red'}
-                sub={c.gap>=0?"You're on track 🎉":"Consider saving more ⚠️"}
-              />
-            </div>
-
-            <div className="grid2">
-              <div className="card">
-                <div className="card-title">Portfolio Growth to Retirement</div>
-                <LineChartC
-                  labels={c.rl}
-                  datasets={[
-                    {label:'Projected Portfolio', data:c.rc.map(x=>x.portfolio), color:'#2563eb'},
-                    {label:'Target', data:c.rc.map(x=>x.target), color:'#16a34a', dashed:true},
-                  ]}
-                  height={240}
-                />
-              </div>
-              <div className="card">
-                <div className="card-title">Portfolio Drawdown in Retirement (30 yrs)</div>
-                <LineChartC
-                  labels={c.pl}
-                  datasets={[{label:'Portfolio Balance', data:c.pc, color:'#7c3aed'}]}
-                  height={240}
-                />
-              </div>
-            </div>
-
-            <div className="card section-gap">
-              <div className="card-title">Retirement Income Analysis</div>
-              <div className="grid4">
-                <div>
-                  <div style={{fontSize:'12px',color:'#6b7280',marginBottom:'4px'}}>Desired Annual Income</div>
-                  <div style={{fontSize:'22px',fontWeight:'700'}}>{fmt(rin)}</div>
-                  <div style={{fontSize:'11px',color:'#9ca3af'}}>in today's dollars</div>
-                </div>
-                <div>
-                  <div style={{fontSize:'12px',color:'#6b7280',marginBottom:'4px'}}>Social Security (annual)</div>
-                  <div style={{fontSize:'22px',fontWeight:'700'}}>{fmt(ss*12)}</div>
-                  <div style={{fontSize:'11px',color:'#9ca3af'}}>${ss.toLocaleString()}/mo</div>
-                </div>
-                <div>
-                  <div style={{fontSize:'12px',color:'#6b7280',marginBottom:'4px'}}>Needed from Portfolio</div>
-                  <div style={{fontSize:'22px',fontWeight:'700'}}>{fmt(Math.max(0,rin-ss*12))}</div>
-                  <div style={{fontSize:'11px',color:'#9ca3af'}}>annually (4% rule)</div>
-                </div>
-                <div>
-                  <div style={{fontSize:'12px',color:'#6b7280',marginBottom:'4px'}}>Savings Rate</div>
-                  <div style={{fontSize:'22px',fontWeight:'700'}}>{inc>0?((ans/inc)*100).toFixed(1):0}%</div>
-                  <div style={{fontSize:'11px',color:'#9ca3af'}}>{fmt(ans)}/yr saved</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── COLLEGE ─────────────────────────────────────────────────────── */}
-        {tab===3 && (
-          <div>
-            {c.coll.length===0 ? (
-              <div className="card">
-                <div className="empty-state">
-                  <div className="emoji">🎓</div>
-                  <p>No children added yet</p>
-                  <small>Go to the Inputs tab → College Savings and enable children</small>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'12px',marginBottom:'16px'}}>
-                  {c.coll.map((k,i)=>(
-                    <Tile key={i} label={k.name} value={`${k.pct}% funded`} sub={`${k.ytc} yrs to college`}
-                      cls={k.pct>=100?'tile-green':k.pct>=60?'tile-yellow':'tile-red'} />
-                  ))}
-                </div>
-                {c.coll.map((k,i)=>(
-                  <div className="card section-gap" key={i}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
-                      <span style={{fontSize:'16px',fontWeight:'700'}}>{k.name}</span>
-                      <span style={{fontSize:'13px',color:'#6b7280'}}>Age {k.age} · {k.ytc} years until college</span>
-                    </div>
-                    <div className="grid4" style={{marginBottom:'16px'}}>
-                      <Tile label="Projected 529 Balance" value={fmtS(k.proj)} cls="tile-blue" />
-                      <Tile label="Projected Total Cost" value={fmtS(k.cost)} cls="tile-orange" />
-                      <Tile label={k.gap>=0?'Surplus':'Shortfall'} value={fmtS(Math.abs(k.gap))} cls={k.gap>=0?'tile-green':'tile-red'} />
-                      <Tile label="Funding Progress" value={`${k.pct}%`} cls={k.pct>=100?'tile-green':'tile-purple'} />
-                    </div>
-                    <div>
-                      <div style={{display:'flex',justifyContent:'space-between',fontSize:'12px',color:'#6b7280',marginBottom:'6px'}}>
-                        <span>Funding progress</span>
-                        <span style={{fontWeight:'600'}}>{fmt(k.proj)} of {fmt(k.cost)}</span>
-                      </div>
-                      <div className="prog-bar-bg">
-                        <div className="prog-bar" style={{
-                          width:`${Math.min(100,k.pct)}%`,
-                          background: k.pct>=100?'#22c55e':k.pct>=75?'#3b82f6':k.pct>=50?'#f59e0b':'#ef4444'
-                        }} />
-                      </div>
-                      {k.gap<0 && (
-                        <p className="gap-note">Additional monthly savings needed: ~{fmt(Math.abs(k.gap)/(k.ytc*12))}/mo</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+    $(`k${i}-on`).addEventListener('change', e => {
+      kids[i].on = e.target.checked;
+      $(`k${i}-fields`).style.display = e.target.checked?'block':'none';
+      recalc();
+    });
+    ['name','age','bal','mo','cost','yrs'].forEach(f => {
+      const el = $(`k${i}-${f}`);
+      if(!el) return;
+      el.addEventListener('input', e => {
+        kids[i][f] = f==='name'?e.target.value:(parseFloat(e.target.value)||0);
+        if(f==='name'){
+          const lbl = $(`kid-box-${i}`).querySelector('.check-lbl');
+          lbl.childNodes[1].textContent = ` Child ${i+1}${kids[i].name?' — '+kids[i].name:''}`;
+        }
+        recalc();
+      });
+    });
+  });
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// ── Charts ───────────────────────────────────────────────────────────────────
+let chartPie=null, chartBar=null, chartLine1=null, chartLine2=null;
+
+function makeOrUpdate(inst, canvasId, cfg){
+  if(inst){ inst.data = cfg.data; inst.options = cfg.options; inst.update(); return inst; }
+  const ctx = $(canvasId)?.getContext('2d');
+  if(!ctx) return null;
+  return new Chart(ctx, cfg);
+}
+
+// ── Main recalc ──────────────────────────────────────────────────────────────
+function recalc(){
+  // Inputs
+  const name   = $('f-name')?.value || 'My Household';
+  const age    = n('f-age');
+  const retAge = n('f-retage');
+  const cash   = n('f-chk')+n('f-sav')+n('f-mkt');
+  const inv    = n('f-brok')+n('f-rsu')+n('f-cry');
+  const ret    = n('f-k1')+n('f-rk')+n('f-ir')+n('f-ri')+n('f-pe')+n('f-ro');
+  const reV    = props.reduce((s,p)=>s+p.val,0);
+  const reM    = props.reduce((s,p)=>s+p.mort,0);
+  const otA    = n('f-veh')+n('f-oth');
+  const totA   = cash+inv+ret+reV+otA;
+  const nonMortLiab = n('f-cl1')+n('f-cl2')+n('f-cc')+n('f-sl')+n('f-od');
+  const totL   = reM+nonMortLiab;
+  const nw     = totA-totL;
+  const inc    = n('f-inc');
+  const ans    = n('f-ans');
+  const rer    = n('f-rer');
+  const infR   = n('f-inf');
+  const rin    = n('f-rin');
+  const ss     = n('f-ss');
+  const yrs    = Math.max(0, retAge-age);
+  const r      = rer/100;
+  const i2     = infR/100;
+  const tgt    = Math.max(0,(rin-ss*12))/0.04;
+
+  // Props equity tags
+  props.forEach((p,i)=>{
+    const el = $(`p${i}-eq`);
+    if(el) el.textContent = p.val>0?'Equity: '+fmt(p.val-p.mort):'';
+  });
+
+  // Subtotals
+  $('st-cash').textContent   = fmt(cash);
+  $('st-inv').textContent    = fmt(inv);
+  $('st-ret').textContent    = fmt(ret);
+  $('st-other').textContent  = fmt(otA);
+  $('st-re').textContent     = fmt(reV);
+  $('st-liab-nm').textContent= fmt(nonMortLiab);
+
+  // Header
+  $('hdr-name').textContent = name;
+  $('hdr-yrs').textContent  = yrs+' yrs';
+
+  // ── Retirement projection ──
+  let port = ret+inv;
+  const rcAges=[], rcPort=[], rcTgt=[];
+  for(let y=0;y<=yrs;y++){
+    rcAges.push(age+y);
+    rcPort.push(Math.round(port));
+    rcTgt.push(Math.round(tgt));
+    port = port*(1+r)+ans;
+  }
+  const pp = rcPort[rcPort.length-1]||0;
+  const gap = pp-tgt;
+  $('hdr-nw').textContent   = fmt(nw);
+  $('hdr-nw').style.color   = nw>=0?'white':'#fca5a5';
+  $('hdr-pp').textContent   = fmtS(pp);
+
+  // Post-retirement 30 yrs
+  const wd = Math.max(0,rin-ss*12);
+  let pv=pp;
+  const pcAges=[], pcPort=[];
+  for(let y=0;y<=30;y++){
+    pcAges.push(retAge+y);
+    pcPort.push(Math.max(0,Math.round(pv)));
+    pv = pv*(1+r)-wd*Math.pow(1+i2,y);
+  }
+
+  // ── College projections ──
+  const collResults = kids.map(k=>{
+    if(!k.on||!k.name) return null;
+    const ytc=Math.max(0,18-k.age);
+    let b=k.bal;
+    for(let y=0;y<ytc;y++) b=b*1.06+k.mo*12;
+    const fc=k.cost*Math.pow(1+i2,ytc)*k.yrs;
+    const pct=fc>0?Math.min(100,Math.round(b/fc*100)):100;
+    return {name:k.name,age:k.age,ytc,proj:Math.round(b),cost:Math.round(fc),gap:Math.round(b-fc),pct};
+  }).filter(Boolean);
+
+  // ── Update Net Worth tab ──
+  $('nw-assets').textContent = fmt(totA);
+  $('nw-liab').textContent   = fmt(totL);
+  $('nw-val').textContent    = fmt(nw);
+  const nwTile = $('nw-tile');
+  nwTile.className = 'tile '+(nw>=0?'tile-green':'tile-orange');
+
+  // Pie chart
+  const pieData = [
+    {name:'Cash & Equiv',value:cash},
+    {name:'Investments', value:inv},
+    {name:'Retirement',  value:ret},
+    {name:'Real Estate', value:reV},
+    {name:'Other',       value:otA}
+  ].filter(x=>x.value>0);
+
+  const pieCfg = {
+    type:'doughnut',
+    data:{
+      labels: pieData.map(x=>x.name),
+      datasets:[{data:pieData.map(x=>x.value),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>fmt(c.raw)}}
+      }
+    }
+  };
+  if(chartPie){ chartPie.destroy(); }
+  const pCtx = $('chart-pie')?.getContext('2d');
+  if(pCtx) chartPie = new Chart(pCtx, pieCfg);
+
+  // Pie legend
+  const pl = $('pie-legend');
+  if(pl){
+    pl.innerHTML = pieData.map((x,i)=>`
+      <div class="drow">
+        <span style="display:flex;align-items:center;gap:8px;color:#6b7280">
+          <span style="width:10px;height:10px;border-radius:50%;background:${COLORS[i]};display:inline-block"></span>${x.name}
+        </span>
+        <span style="font-weight:600">${fmt(x.value)}</span>
+      </div>`).join('');
+  }
+
+  // Bar chart
+  if(chartBar){ chartBar.destroy(); }
+  const bCtx = $('chart-bar')?.getContext('2d');
+  if(bCtx) chartBar = new Chart(bCtx,{
+    type:'bar',
+    data:{
+      labels:['Assets','Liabilities','Net Worth'],
+      datasets:[{data:[totA,totL,nw],backgroundColor:['#2563eb','#dc2626',nw>=0?'#16a34a':'#f97316'],borderRadius:8,borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{grid:{display:false},ticks:{font:{size:12}}}}}
+  });
+
+  // Liabilities breakdown
+  const lb = $('liab-breakdown');
+  if(lb){
+    const rows=[{l:'Mortgages',v:reM},{l:'Car Loans',v:n('f-cl1')+n('f-cl2')},{l:'Credit Cards',v:n('f-cc')},{l:'Student Loans',v:n('f-sl')},{l:'Other Debt',v:n('f-od')}].filter(x=>x.v>0);
+    lb.innerHTML = rows.length ? rows.map(x=>`<div class="drow"><span style="color:#6b7280">${x.l}</span><span style="color:#dc2626;font-weight:600">${fmt(x.v)}</span></div>`).join('') : '<p style="font-size:12px;color:#9ca3af">No liabilities entered</p>';
+  }
+
+  // RE detail
+  const reCard = $('re-detail-card');
+  const reGrid = $('re-detail-grid');
+  if(reCard && reGrid){
+    const activeProp = props.filter(p=>p.val>0);
+    reCard.style.display = activeProp.length?'block':'none';
+    reGrid.innerHTML = activeProp.map(p=>`
+      <div class="inner-box">
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px">${p.name||'Property'}</div>
+        <div class="drow"><span style="color:#6b7280">Value</span><span style="font-weight:600">${fmt(p.val)}</span></div>
+        <div class="drow"><span style="color:#6b7280">Mortgage</span><span style="color:#dc2626;font-weight:600">${fmt(p.mort)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding-top:6px;margin-top:4px;border-top:1px solid #e5e7eb">
+          <span style="font-weight:700">Equity</span><span style="color:#15803d;font-weight:700">${fmt(p.val-p.mort)}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Update Retirement tab ──
+  $('ret-yrs').textContent       = yrs;
+  $('ret-pp').textContent        = fmtS(pp);
+  $('ret-tgt').textContent       = fmtS(tgt);
+  $('ret-gap-val').textContent   = fmtS(Math.abs(gap));
+  $('ret-gap-lbl').textContent   = gap>=0?'Projected Surplus':'Projected Shortfall';
+  $('ret-gap-sub').textContent   = gap>=0?"You're on track 🎉":"Consider saving more ⚠️";
+  const gapTile = $('ret-gap-tile');
+  if(gapTile) gapTile.className = 'tile '+(gap>=0?'tile-green':'tile-red');
+  $('ret-inc-desired').textContent = fmt(rin);
+  $('ret-inc-ss').textContent      = fmt(ss*12);
+  $('ret-inc-ss-mo').textContent   = '$'+ss.toLocaleString()+'/mo';
+  $('ret-inc-needed').textContent  = fmt(Math.max(0,rin-ss*12));
+  $('ret-savrate').textContent     = inc>0?((ans/inc)*100).toFixed(1)+'%':'0%';
+  $('ret-savamt').textContent      = fmt(ans)+'/yr saved';
+
+  // Line chart 1 — growth
+  if(chartLine1){ chartLine1.destroy(); }
+  const l1ctx = $('chart-line1')?.getContext('2d');
+  if(l1ctx) chartLine1 = new Chart(l1ctx,{
+    type:'line',
+    data:{labels:rcAges,datasets:[
+      {label:'Projected Portfolio',data:rcPort,borderColor:'#2563eb',backgroundColor:'transparent',borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Target',data:rcTgt,borderColor:'#16a34a',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0,borderDash:[6,3]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
+      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
+  });
+
+  // Line chart 2 — drawdown
+  if(chartLine2){ chartLine2.destroy(); }
+  const l2ctx = $('chart-line2')?.getContext('2d');
+  if(l2ctx) chartLine2 = new Chart(l2ctx,{
+    type:'line',
+    data:{labels:pcAges,datasets:[
+      {label:'Portfolio Balance',data:pcPort,borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:2.5,pointRadius:0,tension:0.3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
+      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
+  });
+
+  // ── Update College tab ──
+  const hasColl = collResults.length>0;
+  $('college-empty').style.display  = hasColl?'none':'block';
+  $('college-summary-tiles').innerHTML = collResults.map(k=>`
+    <div class="tile ${k.pct>=100?'tile-green':k.pct>=60?'tile-yellow':'tile-red'}">
+      <div class="t-lbl">${k.name}</div>
+      <div class="t-val">${k.pct}% funded</div>
+      <div class="t-sub">${k.ytc} yrs to college</div>
+    </div>`).join('');
+
+  $('college-cards').innerHTML = collResults.map(k=>`
+    <div class="card gap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="font-size:16px;font-weight:700">${k.name}</span>
+        <span style="font-size:13px;color:#6b7280">Age ${k.age} · ${k.ytc} years until college</span>
+      </div>
+      <div class="grid4" style="margin-bottom:16px">
+        <div class="tile tile-blue"><div class="t-lbl">Projected 529 Balance</div><div class="t-val">${fmtS(k.proj)}</div></div>
+        <div class="tile tile-orange"><div class="t-lbl">Projected Total Cost</div><div class="t-val">${fmtS(k.cost)}</div></div>
+        <div class="tile ${k.gap>=0?'tile-green':'tile-red'}"><div class="t-lbl">${k.gap>=0?'Surplus':'Shortfall'}</div><div class="t-val">${fmtS(Math.abs(k.gap))}</div></div>
+        <div class="tile ${k.pct>=100?'tile-green':'tile-purple'}"><div class="t-lbl">Funding Progress</div><div class="t-val">${k.pct}%</div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:6px">
+          <span>Funding progress</span><span style="font-weight:600">${fmt(k.proj)} of ${fmt(k.cost)}</span>
+        </div>
+        <div class="prog-bg">
+          <div class="prog-fill" style="width:${Math.min(100,k.pct)}%;background:${k.pct>=100?'#22c55e':k.pct>=75?'#3b82f6':k.pct>=50?'#f59e0b':'#ef4444'}"></div>
+        </div>
+        ${k.gap<0?`<p class="gap-note">Additional monthly savings needed: ~${fmt(Math.abs(k.gap)/(k.ytc*12))}/mo</p>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-'+btn.dataset.tab).classList.add('active');
+    recalc(); // redraw charts when switching
+  });
+});
+
+// ── Wire up all simple inputs ────────────────────────────────────────────────
+['f-name','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
+ 'f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth',
+ 'f-cl1','f-cl2','f-cc','f-sl','f-od',
+ 'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss'
+].forEach(id=>{
+  const el=$(id);
+  if(el) el.addEventListener('input', recalc);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildProps();
+buildKids();
+recalc();
 </script>
 </body>
 </html>
