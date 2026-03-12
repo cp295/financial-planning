@@ -7,7 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef2ff;color:#111827;font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:
+  radial-gradient(ellipse at 15% 20%, rgba(99,102,241,.13) 0%, transparent 50%),
+  radial-gradient(ellipse at 85% 10%, rgba(59,130,246,.10) 0%, transparent 45%),
+  radial-gradient(ellipse at 70% 80%, rgba(139,92,246,.08) 0%, transparent 50%),
+  radial-gradient(ellipse at 20% 85%, rgba(16,185,129,.07) 0%, transparent 45%),
+  linear-gradient(160deg, #e0e7ff 0%, #ede9fe 40%, #dbeafe 100%);
+}
 /* Header */
 .hdr{background:linear-gradient(135deg,#1d4ed8,#4338ca);color:#fff;padding:16px 24px}
 .hdr-inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
@@ -290,7 +297,7 @@ const COLORS = ['#2563eb','#16a34a','#d97706','#7c3aed','#0891b2','#dc2626'];
 
 // ── State ────────────────────────────────────────────────────────────────────
 const props = [
-  {name:'Primary Home',val:0,mort:0},
+  {name:'Primary Residence',val:0,mort:0},
   {name:'',val:0,mort:0},
   {name:'',val:0,mort:0}
 ];
@@ -309,8 +316,8 @@ function buildProps(){
     const d = document.createElement('div');
     d.className = 'inner-box';
     d.innerHTML = `
-      <label class="field-label">Property ${i+1} Name</label>
-      <div class="field-wrap"><input type="text" id="p${i}-name" value="${p.name}" placeholder="${i===0?'Primary Home':'Property '+(i+1)}"/></div>
+      <label class="field-label">${i===0?'Primary Residence':'Property '+(i+1)+' Name'}</label>
+      <div class="field-wrap"><input type="text" id="p${i}-name" value="${p.name}" placeholder="${i===0?'Primary Residence':'Property '+(i+1)}"/></div>
       <label class="field-label">Estimated Market Value</label>
       <div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="p${i}-val" value="${p.val}" min="0"/></div>
       <label class="field-label">Mortgage Balance</label>
