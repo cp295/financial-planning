@@ -71,6 +71,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .empty .em{font-size:48px;margin-bottom:12px}
 .empty p{color:#6b7280;font-size:16px;font-weight:600}
 .empty small{color:#9ca3af;font-size:13px;display:block;margin-top:6px}
+/* Save button */
+.save-btn{display:flex;align-items:center;gap:8px;padding:9px 18px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);color:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s;font-family:inherit;white-space:nowrap}
+.save-btn:hover{background:rgba(255,255,255,0.25);border-color:rgba(255,255,255,0.7)}
+.save-btn.saved{background:rgba(34,197,94,0.3);border-color:#4ade80}
+.save-meta{font-size:11px;color:#93c5fd;margin-top:3px}
 @media(max-width:680px){
   .grid3,.grid4{grid-template-columns:1fr 1fr}
   .hdr-stats{gap:12px}
@@ -86,11 +91,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div>
       <h1>Financial Planning Dashboard</h1>
       <div class="hdr-sub" id="hdr-name">My Household</div>
+      <div class="save-meta" id="hdr-saved"></div>
     </div>
     <div class="hdr-stats">
+      <div class="hdr-stat"><div class="s-lbl">As of Date</div><div class="s-val" id="hdr-asof" style="font-size:15px">—</div></div>
       <div class="hdr-stat"><div class="s-lbl">Net Worth</div><div class="s-val" id="hdr-nw">$0</div></div>
       <div class="hdr-stat"><div class="s-lbl">Retire in</div><div class="s-val" id="hdr-yrs">0 yrs</div></div>
       <div class="hdr-stat"><div class="s-lbl">Proj. Portfolio</div><div class="s-val" id="hdr-pp">$0</div></div>
+      <div class="hdr-stat" style="text-align:left">
+        <button class="save-btn" id="save-btn" onclick="saveData()">💾 Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -113,8 +123,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
       <div class="full card">
         <div class="card-title">👤 Personal Information</div>
-        <div class="row2" style="grid-template-columns:repeat(3,1fr)">
+        <div class="row2" style="grid-template-columns:repeat(4,1fr)">
           <div><label class="field-label">Household / Name</label><div class="field-wrap"><input type="text" id="f-name" value="My Household"/></div></div>
+          <div><label class="field-label">As of Date</label><div class="field-wrap"><input type="date" id="f-asof"/></div></div>
           <div><label class="field-label">Your Current Age</label><div class="field-wrap"><input type="number" id="f-age" value="38" min="18" max="85"/></div></div>
           <div><label class="field-label">Target Retirement Age</label><div class="field-wrap"><input type="number" id="f-retage" value="65" min="45" max="90"/></div></div>
         </div>
@@ -413,6 +424,8 @@ function recalc(){
   // Header
   $('hdr-name').textContent = name;
   $('hdr-yrs').textContent  = yrs+' yrs';
+  const asof = $('f-asof')?.value;
+  $('hdr-asof').textContent = asof ? new Date(asof+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
 
   // ── Retirement projection ──
   let port = ret+inv;
@@ -608,6 +621,49 @@ function recalc(){
     </div>`).join('');
 }
 
+// ── Save / Load ───────────────────────────────────────────────────────────────
+const FIELD_IDS = ['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt',
+  'f-brok','f-rsu','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro',
+  'f-veh','f-oth','f-cl1','f-cl2','f-cc','f-sl','f-od',
+  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss'];
+
+function saveData(){
+  const data = {
+    fields: Object.fromEntries(FIELD_IDS.map(id => [id, $(id)?.value||''])),
+    props: JSON.parse(JSON.stringify(props)),
+    kids:  JSON.parse(JSON.stringify(kids)),
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem('fp-data', JSON.stringify(data));
+  const btn = $('save-btn');
+  btn.textContent = '✅ Saved!';
+  btn.classList.add('saved');
+  updateSaveMeta(data.savedAt);
+  setTimeout(()=>{ btn.textContent='💾 Save'; btn.classList.remove('saved'); }, 2000);
+}
+
+function updateSaveMeta(isoStr){
+  const el = $('hdr-saved');
+  if(!el||!isoStr) return;
+  const d = new Date(isoStr);
+  el.textContent = 'Last saved: '+d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' at '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function loadData(){
+  try {
+    const raw = localStorage.getItem('fp-data');
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    // Restore simple fields
+    if(data.fields) Object.entries(data.fields).forEach(([id,val])=>{ const el=$(id); if(el) el.value=val; });
+    // Restore props
+    if(data.props) data.props.forEach((p,i)=>{ if(props[i]) Object.assign(props[i],p); });
+    // Restore kids
+    if(data.kids) data.kids.forEach((k,i)=>{ if(kids[i]) Object.assign(kids[i],k); });
+    updateSaveMeta(data.savedAt);
+  } catch(e){ console.warn('Could not load saved data',e); }
+}
+
 // ── Tab switching ────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -620,7 +676,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 // ── Wire up all simple inputs ────────────────────────────────────────────────
-['f-name','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
+['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
  'f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth',
  'f-cl1','f-cl2','f-cc','f-sl','f-od',
  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss'
@@ -630,7 +686,12 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-buildProps();
+// Set today's date as default for as-of date
+const today = new Date().toISOString().split('T')[0];
+$('f-asof').value = today;
+
+loadData();   // restore any previously saved data
+buildProps(); // build dynamic sections (uses loaded state)
 buildKids();
 recalc();
 </script>
