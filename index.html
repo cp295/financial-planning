@@ -120,8 +120,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       <div class="save-meta" id="hdr-saved"></div>
     </div>
     <div class="hdr-stats">
-      <div class="hdr-stat"><div class="s-lbl">As of</div><div class="s-val" id="hdr-asof" style="font-size:13px;line-height:1.3">—</div></div>
-      <div class="hdr-stat"><div class="s-lbl">Net Worth</div><div class="s-val" id="hdr-nw">$0</div></div>
       <div class="hdr-stat"><div class="s-lbl">Retire in</div><div class="s-val" id="hdr-yrs">0 yrs</div></div>
       <div class="hdr-stat"><div class="s-lbl">Proj. Portfolio</div><div class="s-val" id="hdr-pp">$0</div></div>
       <div class="hdr-btns">
@@ -400,7 +398,7 @@ function buildSourcesHtml(ph, textColor, canvasId){
         }]
       },
       options:{
-        responsive:true, maintainAspectRatio:true,
+        responsive:false,
         cutout:'62%',
         plugins:{
           legend:{display:false},
@@ -426,17 +424,19 @@ function buildSourcesHtml(ph, textColor, canvasId){
 
   return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1)">
     <div style="font-size:11px;font-weight:700;color:${textColor};opacity:.55;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Avg Annual Income Sources</div>
-    <div style="display:flex;align-items:center;gap:16px">
-      <canvas id="${canvasId}" width="120" height="120" style="flex-shrink:0;max-width:120px"></canvas>
-      <div style="flex:1">
-        ${rows.map((r,i)=>{
+    <div style="display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:center">
+      <canvas id="${canvasId}" width="160" height="160"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${rows.map(r=>{
           const avg=r.total/yrs;
           const pct=grandTotal>0?(r.total/grandTotal*100).toFixed(0):0;
-          return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <div style="width:8px;height:8px;border-radius:50%;background:${r.color};flex-shrink:0"></div>
-            <span style="font-size:12px;color:${textColor};flex:1">${r.label}</span>
-            <span style="font-size:12px;font-weight:700;color:${textColor}">${fmt(avg)}/yr</span>
-            <span style="font-size:11px;color:${textColor};opacity:.55">${pct}%</span>
+          return `<div style="background:rgba(0,0,0,.05);border-radius:10px;padding:10px 12px">
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+              <div style="width:9px;height:9px;border-radius:50%;background:${r.color};flex-shrink:0"></div>
+              <span style="font-size:11px;color:${textColor};opacity:.7;line-height:1.3">${r.label}</span>
+            </div>
+            <div style="font-size:15px;font-weight:700;color:${textColor}">${fmt(avg)}/yr</div>
+            <div style="font-size:11px;color:${textColor};opacity:.5;margin-top:1px">${pct}% of income</div>
           </div>`;
         }).join('')}
       </div>
