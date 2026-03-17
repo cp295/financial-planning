@@ -582,13 +582,16 @@ function recalc(){
   $('hdr-name').textContent = name;
   $('hdr-yrs').textContent  = yrs+' yrs';
   const asof = $('f-asof')?.value;
-  if(asof){
-    const d = new Date(asof);
-    const datePart = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    const timePart = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    $('hdr-asof').innerHTML = datePart+'<br><span style="font-size:11px;opacity:.75">'+timePart+'</span>';
-  } else {
-    $('hdr-asof').textContent = '—';
+  const asofEl = $('hdr-asof');
+  if(asofEl){
+    if(asof){
+      const d = new Date(asof);
+      const datePart = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const timePart = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+      asofEl.innerHTML = datePart+'<br><span style="font-size:11px;opacity:.75">'+timePart+'</span>';
+    } else {
+      asofEl.textContent = '—';
+    }
   }
 
   // ── New inputs ──
@@ -625,8 +628,8 @@ function recalc(){
   const pp       = ppNonRet + ppRet;
   const gap      = pp - portTarget;
 
-  $('hdr-nw').textContent   = fmt(nw);
-  $('hdr-nw').style.color   = nw>=0?'white':'#fca5a5';
+  const nwEl = $('hdr-nw');
+  if(nwEl){ nwEl.textContent = fmt(nw); nwEl.style.color = nw>=0?'white':'#fca5a5'; }
   $('hdr-pp').textContent   = fmtS(pp);
 
   // ── Post-retirement phased drawdown (30 yrs) ──
