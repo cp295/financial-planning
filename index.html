@@ -634,29 +634,23 @@ function recalc(){
 
   // ── Post-retirement phased drawdown (30 yrs) ──
   const PENALTY = 1.10;  // 10% early withdrawal penalty → need 10% more gross
-  let pCash   = ppCash;
   let pEquity = ppEquity;
   let pRet    = ppRet;
-  const pcAges=[], pcCash=[], pcEquity=[], pcNonRet=[], pcRetLine=[], pcTotal=[];
+  const pcAges=[], pcEquity=[], pcNonRet=[], pcRetLine=[], pcTotal=[];
   let earlyPenaltyTriggered = false;
   let penaltyYears = 0;
 
-  // Per-phase income source trackers (totals across all years in each phase)
-  const ph1={yrs:0,cash:0,equity:0,ret:0,rental:0,ss:0,penalty:0};
-  const ph2={yrs:0,cash:0,equity:0,ret:0,rental:0,ss:0};
-  const ph3={yrs:0,cash:0,equity:0,ret:0,rental:0,ss:0};
+  // Per-phase income source trackers (cash excluded from retirement projections)
+  const ph1={yrs:0,equity:0,ret:0,rental:0,ss:0,penalty:0};
+  const ph2={yrs:0,equity:0,ret:0,rental:0,ss:0};
+  const ph3={yrs:0,equity:0,ret:0,rental:0,ss:0};
 
-  // Draw from cash first, then equity; returns drawn amounts + shortfall
+  // Draw from equity only (cash excluded from retirement projections)
   const drawNonRet = (needed) => {
-    let dCash=0, dEquity=0;
-    if(pCash >= needed){ dCash = needed; pCash -= needed; }
-    else {
-      dCash = pCash; pCash = 0;
-      const rem = needed - dCash;
-      if(pEquity >= rem){ dEquity = rem; pEquity -= rem; }
-      else { dEquity = pEquity; pEquity = 0; }
-    }
-    return {dCash, dEquity, shortfall: needed - dCash - dEquity};
+    let dEquity=0;
+    if(pEquity >= needed){ dEquity = needed; pEquity -= needed; }
+    else { dEquity = pEquity; pEquity = 0; }
+    return {dEquity, shortfall: needed - dEquity};
   };
 
   for(let y=0;y<=30;y++){
@@ -667,17 +661,16 @@ function recalc(){
     let   needed   = Math.max(0, desired - ssIncome - rentalAnn);
 
     pcAges.push(ageNow);
-    pcCash.push(Math.max(0, Math.round(pCash)));
     pcEquity.push(Math.max(0, Math.round(pEquity)));
-    pcNonRet.push(Math.max(0, Math.round(pCash + pEquity)));
+    pcNonRet.push(Math.max(0, Math.round(pEquity)));
     pcRetLine.push(Math.max(0, Math.round(pRet)));
-    pcTotal.push(Math.max(0, Math.round(pCash + pEquity + pRet)));
+    pcTotal.push(Math.max(0, Math.round(pEquity + pRet)));
 
     const drawn = drawNonRet(needed);
     let drawnRetNet=0, drawnPenalty=0;
 
     if(ageNow < 59.5){
-      // Phase 1 — cash → equity → retirement with 10% IRS penalty
+      // Phase 1 — equity first, then retirement with 10% IRS penalty
       if(drawn.shortfall > 0){
         pRet -= drawn.shortfall * PENALTY;
         drawnRetNet  = drawn.shortfall;
@@ -685,23 +678,22 @@ function recalc(){
         if(!earlyPenaltyTriggered){ earlyPenaltyTriggered = true; }
         penaltyYears++;
       }
-      ph1.yrs++;  ph1.cash+=drawn.dCash;  ph1.equity+=drawn.dEquity;  ph1.ret+=drawnRetNet;
+      ph1.yrs++;  ph1.equity+=drawn.dEquity;  ph1.ret+=drawnRetNet;
       ph1.rental+=rentalAnn;  ph1.penalty+=drawnPenalty;
 
     } else if(ageNow < ssAge){
-      // Phase 2 — cash → equity → retirement penalty-free, no SS
+      // Phase 2 — equity first, then retirement penalty-free, no SS
       if(drawn.shortfall > 0){ pRet -= drawn.shortfall; drawnRetNet = drawn.shortfall; }
-      ph2.yrs++;  ph2.cash+=drawn.dCash;  ph2.equity+=drawn.dEquity;  ph2.ret+=drawnRetNet;
+      ph2.yrs++;  ph2.equity+=drawn.dEquity;  ph2.ret+=drawnRetNet;
       ph2.rental+=rentalAnn;
 
     } else {
-      // Phase 3 — SS offsets need, then cash → equity → retirement
+      // Phase 3 — SS offsets need, then equity → retirement
       if(drawn.shortfall > 0){ pRet -= drawn.shortfall; drawnRetNet = drawn.shortfall; }
-      ph3.yrs++;  ph3.cash+=drawn.dCash;  ph3.equity+=drawn.dEquity;  ph3.ret+=drawnRetNet;
+      ph3.yrs++;  ph3.equity+=drawn.dEquity;  ph3.ret+=drawnRetNet;
       ph3.rental+=rentalAnn;  ph3.ss+=ssIncome;
     }
 
-    pCash   = Math.max(0, pCash)   * (1+r);
     pEquity = Math.max(0, pEquity) * (1+r);
     pRet    = Math.max(0, pRet)    * (1+r);
   }
@@ -934,10 +926,9 @@ function recalc(){
   if(l2ctx) chartLine2 = new Chart(l2ctx,{
     type:'line',
     data:{labels:pcAges,datasets:[
-      {label:'Total Portfolio',    data:pcTotal,    borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
-      {label:'Cash & Equivalents', data:pcCash,     borderColor:'#0891b2',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[3,2]},
-      {label:'Equity Portfolio',   data:pcEquity,   borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
-      {label:'Retirement Accounts',data:pcRetLine,  borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]}
+      {label:'Total Portfolio',    data:pcTotal,   borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Equity Portfolio',   data:pcEquity,  borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Retirement Accounts',data:pcRetLine, borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]}
     ]},
     options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
       scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
