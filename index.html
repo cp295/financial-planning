@@ -157,9 +157,8 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 
       <div class="full card">
         <div class="card-title">👤 Personal Information</div>
-        <div class="row2" style="grid-template-columns:repeat(4,1fr)">
+        <div class="row2" style="grid-template-columns:repeat(3,1fr)">
           <div><label class="field-label">Household / Name</label><div class="field-wrap"><input type="text" id="f-name" value="My Household"/></div></div>
-          <div><label class="field-label">As of Date &amp; Time</label><div class="field-wrap"><input type="datetime-local" id="f-asof"/></div></div>
           <div><label class="field-label">Your Current Age</label><div class="field-wrap"><input type="number" id="f-age" value="38" min="18" max="85"/></div></div>
           <div><label class="field-label">Target Retirement Age</label><div class="field-wrap"><input type="number" id="f-retage" value="65" min="45" max="90"/></div></div>
         </div>
@@ -188,7 +187,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
           <div><label class="field-label">Roth 401(k)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rk" value="0" min="0"/></div></div>
           <div><label class="field-label">Traditional IRA</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ir" value="0" min="0"/></div></div>
           <div><label class="field-label">Roth IRA</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ri" value="0" min="0"/></div></div>
-          <div><label class="field-label">Pension (present value)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-pe" value="0" min="0"/></div></div>
           <div><label class="field-label">Other Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ro" value="0" min="0"/></div></div>
         </div>
         <div class="subtotal blue"><span>Subtotal</span><span id="st-ret">$0</span></div>
@@ -202,7 +200,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       </div>
 
       <div class="full card">
-        <div class="card-title">🏠 Real Estate</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🏠 Real Estate</span>
+          <button onclick="addProp()" style="font-size:12px;font-weight:600;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit">+ Add Property</button>
+        </div>
         <div class="grid2" id="prop-grid">
           <!-- Properties injected by JS -->
         </div>
@@ -225,8 +226,12 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
         <label class="field-label">Annual Amount Saved for Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ans" value="24000" min="0"/></div>
         <label class="field-label">Desired Annual Retirement Income (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rin" value="90000" min="0"/></div>
         <div class="row2">
-          <div><label class="field-label">Expected Monthly Social Security</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ss" value="2200" min="0"/></div></div>
-          <div><label class="field-label">Social Security Start Age</label><div class="field-wrap"><input type="number" id="f-ssage" value="67" min="62" max="70"/></div></div>
+          <div><label class="field-label">Expected Monthly Social Security</label><a href="https://www.ssa.gov/OACT/quickcalc/" target="_blank" rel="noopener" style="font-size:11px;color:#2563eb;text-decoration:none;display:inline-block;margin-bottom:4px">🔗 Estimate on SSA.gov →</a><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ss" value="2200" min="0"/></div></div>
+          <div><label class="field-label">Social Security Start Age</label><div class="field-wrap"><input type="number" id="f-ssage" value="67" min="62" max="70"/></div><div style="font-size:11px;color:#6b7280;margin-top:-8px;margin-bottom:8px" id="ss-start-year"></div></div>
+        </div>
+        <div class="row2">
+          <div><label class="field-label">Monthly Pension Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-pe" value="0" min="0"/></div></div>
+          <div><label class="field-label">Pension Start Age</label><div class="field-wrap"><input type="number" id="f-peage" value="65" min="50" max="80"/></div><div style="font-size:11px;color:#6b7280;margin-top:-8px;margin-bottom:8px" id="pe-start-year"></div></div>
         </div>
         <label class="field-label">Monthly Rental Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rental" value="0" min="0"/></div>
         <div class="row2">
@@ -236,7 +241,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       </div>
 
       <div class="full card">
-        <div class="card-title">🎓 College Savings (529 Plans)</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>🎓 College Savings (529 Plans)</span>
+          <button onclick="addKid()" style="font-size:12px;font-weight:600;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:inherit">+ Add Child</button>
+        </div>
         <div class="grid2" id="kids-grid">
           <!-- Kids injected by JS -->
         </div>
@@ -308,6 +316,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
         <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Desired Annual Income</div><div style="font-size:20px;font-weight:700" id="ret-inc-desired">$0</div><div style="font-size:11px;color:#9ca3af">in today's dollars</div></div>
         <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Rental Income (annual)</div><div style="font-size:20px;font-weight:700" id="ret-inc-rental">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-rental-mo"></div></div>
         <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Social Security</div><div style="font-size:20px;font-weight:700" id="ret-inc-ss">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-ss-mo"></div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Pension Income</div><div style="font-size:20px;font-weight:700" id="ret-inc-pe">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-pe-mo"></div></div>
         <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Needed from Portfolio</div><div style="font-size:20px;font-weight:700" id="ret-inc-needed">$0</div><div style="font-size:11px;color:#9ca3af">annually at retirement</div></div>
         <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Savings Rate</div><div style="font-size:20px;font-weight:700" id="ret-savrate">0%</div><div style="font-size:11px;color:#9ca3af" id="ret-savamt"></div></div>
       </div>
@@ -350,11 +359,11 @@ function buildSourcesHtml(ph, textColor, canvasId){
   const rin  = parseFloat(document.getElementById('f-rin')?.value) || 0;
 
   const rows=[
-    {label:'Cash & Equivalents',  total:ph.cash||0,   color:'#0891b2'},
-    {label:'Equity Portfolio',    total:ph.equity||0, color:'#f97316'},
-    {label:'Retirement Accounts', total:ph.ret||0,    color:'#7c3aed'},
-    {label:'Rental Income',       total:ph.rental||0, color:'#64748b'},
-    {label:'Social Security',     total:ph.ss||0,     color:'#16a34a'},
+    {label:'Taxable Accounts',    total:ph.equity||0,  color:'#f97316'},
+    {label:'Retirement Accounts', total:ph.ret||0,     color:'#7c3aed'},
+    {label:'Rental Income',       total:ph.rental||0,  color:'#64748b'},
+    {label:'Pension',             total:ph.pension||0, color:'#0891b2'},
+    {label:'Social Security',     total:ph.ss||0,      color:'#16a34a'},
   ].filter(r=>r.total>1);
   if(!rows.length) return '';
 
@@ -365,11 +374,13 @@ function buildSourcesHtml(ph, textColor, canvasId){
     const avg = r.total/yrs;
     const pct = grandTotal>0?(r.total/grandTotal*100).toFixed(1):0;
     let detail = '';
-    if(r.label==='Cash & Equivalents' || r.label==='Equity Portfolio'){
+    if(r.label==='Taxable Accounts'){
       detail = `Today's $ equiv: ${fmt(avg/(Math.pow(1+infR/100, yrs/2)))} · Inflation ${infR}% annualized`;
     } else if(r.label==='Retirement Accounts'){
       detail = `Gross withdrawal (net after tax varies) · ${pct}% of income`;
     } else if(r.label==='Rental Income'){
+      detail = `${fmt(avg/12)}/mo · ${pct}% of income`;
+    } else if(r.label==='Pension'){
       detail = `${fmt(avg/12)}/mo · ${pct}% of income`;
     } else if(r.label==='Social Security'){
       detail = `${fmt(avg/12)}/mo · ${pct}% of income · inflation-indexed`;
@@ -446,28 +457,25 @@ function buildSourcesHtml(ph, textColor, canvasId){
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
-const props = [
-  {name:'Primary Residence',val:0,mort:0},
-  {name:'',val:0,mort:0},
-  {name:'',val:0,mort:0}
-];
-const kids = [
-  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4},
-  {on:false,name:'',age:0,bal:0,mo:0,cost:35000,yrs:4}
-];
+const props = [];
+const kids = [];
 
 // ── Build dynamic HTML sections ──────────────────────────────────────────────
 function buildProps(){
   const g = $('prop-grid');
   g.innerHTML = '';
+  if(!props.length){
+    g.innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:8px 0">No properties added. Click "+ Add Property" to get started.</p>';
+  }
   props.forEach((p,i) => {
     const d = document.createElement('div');
     d.className = 'inner-box';
+    d.style.position = 'relative';
+    const lbl = 'Property '+(i+1)+' Name';
     d.innerHTML = `
-      <label class="field-label">${i===0?'Primary Residence':'Property '+(i+1)+' Name'}</label>
-      <div class="field-wrap"><input type="text" id="p${i}-name" value="${p.name}" placeholder="${i===0?'Primary Residence':'Property '+(i+1)}"/></div>
+      <button onclick="removeProp(${i})" title="Remove property" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;font-size:15px;color:#9ca3af;line-height:1;padding:2px 5px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#9ca3af'">✕</button>
+      <label class="field-label">${lbl}</label>
+      <div class="field-wrap" style="padding-right:28px"><input type="text" id="p${i}-name" value="${p.name}" placeholder="${lbl}"/></div>
       <label class="field-label">Estimated Market Value</label>
       <div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="p${i}-val" value="${p.val}" min="0"/></div>
       <label class="field-label">Mortgage Balance</label>
@@ -480,51 +488,70 @@ function buildProps(){
   });
 }
 
+function removeProp(i){
+  props.splice(i, 1);
+  buildProps();
+  recalc();
+}
+
+function addProp(){
+  props.push({name:'', val:0, mort:0});
+  buildProps();
+  recalc();
+}
+
 function buildKids(){
   const g = $('kids-grid');
   g.innerHTML = '';
+  if(!kids.length){
+    g.innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:8px 0">No children added. Click "+ Add Child" to get started.</p>';
+  }
   kids.forEach((k,i) => {
     const d = document.createElement('div');
     d.className = 'inner-box';
+    d.style.position = 'relative';
     d.id = `kid-box-${i}`;
     d.innerHTML = `
-      <label class="check-lbl">
-        <input type="checkbox" id="k${i}-on" ${k.on?'checked':''}/> Child ${i+1}${k.name?' — '+k.name:''}
-      </label>
-      <div id="k${i}-fields" style="display:${k.on?'block':'none'}">
-        <div class="row2">
-          <div><label class="field-label">Name</label><div class="field-wrap"><input type="text" id="k${i}-name" value="${k.name}" placeholder="Name"/></div></div>
-          <div><label class="field-label">Age</label><div class="field-wrap"><input type="number" id="k${i}-age" value="${k.age}" min="0" max="17"/></div></div>
-        </div>
-        <div class="row2">
-          <div><label class="field-label">529 Balance</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-bal" value="${k.bal}" min="0"/></div></div>
-          <div><label class="field-label">Monthly Contrib.</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-mo" value="${k.mo}" min="0"/></div></div>
-        </div>
-        <div class="row2">
-          <div><label class="field-label">Annual Cost (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-cost" value="${k.cost}" min="0"/></div></div>
-          <div><label class="field-label">Years of College</label><div class="field-wrap"><input type="number" id="k${i}-yrs" value="${k.yrs}" min="1" max="6"/></div></div>
-        </div>
+      <button onclick="removeKid(${i})" title="Remove child" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;font-size:15px;color:#9ca3af;line-height:1;padding:2px 5px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#9ca3af'">✕</button>
+      <div style="font-size:12px;font-weight:700;color:#6b7280;margin-bottom:10px;padding-right:24px">Child ${i+1}${k.name?' — '+k.name:''}</div>
+      <div class="row2">
+        <div><label class="field-label">Name</label><div class="field-wrap"><input type="text" id="k${i}-name" value="${k.name}" placeholder="Name"/></div></div>
+        <div><label class="field-label">Age</label><div class="field-wrap"><input type="number" id="k${i}-age" value="${k.age}" min="0" max="17"/></div></div>
+      </div>
+      <div class="row2">
+        <div><label class="field-label">529 Balance</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-bal" value="${k.bal}" min="0"/></div></div>
+        <div><label class="field-label">Monthly Contrib.</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-mo" value="${k.mo}" min="0"/></div></div>
+      </div>
+      <div class="row2">
+        <div><label class="field-label">Annual Cost (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="k${i}-cost" value="${k.cost}" min="0"/></div></div>
+        <div><label class="field-label">Years of College</label><div class="field-wrap"><input type="number" id="k${i}-yrs" value="${k.yrs}" min="1" max="6"/></div></div>
       </div>`;
     g.appendChild(d);
 
-    $(`k${i}-on`).addEventListener('change', e => {
-      kids[i].on = e.target.checked;
-      $(`k${i}-fields`).style.display = e.target.checked?'block':'none';
-      recalc();
-    });
     ['name','age','bal','mo','cost','yrs'].forEach(f => {
       const el = $(`k${i}-${f}`);
       if(!el) return;
       el.addEventListener('input', e => {
         kids[i][f] = f==='name'?e.target.value:(parseFloat(e.target.value)||0);
         if(f==='name'){
-          const lbl = $(`kid-box-${i}`).querySelector('.check-lbl');
-          lbl.childNodes[1].textContent = ` Child ${i+1}${kids[i].name?' — '+kids[i].name:''}`;
+          $(`kid-box-${i}`).querySelector('div').textContent = `Child ${i+1}${kids[i].name?' — '+kids[i].name:''}`;
         }
         recalc();
       });
     });
   });
+}
+
+function removeKid(i){
+  kids.splice(i, 1);
+  buildKids();
+  recalc();
+}
+
+function addKid(){
+  kids.push({name:'', age:0, bal:0, mo:0, cost:35000, yrs:4});
+  buildKids();
+  recalc();
 }
 
 // ── Charts ───────────────────────────────────────────────────────────────────
@@ -545,7 +572,7 @@ function recalc(){
   const retAge = n('f-retage');
   const cash   = n('f-chk')+n('f-sav')+n('f-mkt');
   const inv    = n('f-brok')+n('f-rsu')+n('f-cry');
-  const ret    = n('f-k1')+n('f-rk')+n('f-ir')+n('f-ri')+n('f-pe')+n('f-ro');
+  const ret    = n('f-k1')+n('f-rk')+n('f-ir')+n('f-ri')+n('f-ro');
   const reV    = props.reduce((s,p)=>s+p.val,0);
   const reM    = props.reduce((s,p)=>s+p.mort,0);
   const otA    = n('f-veh')+n('f-oth');
@@ -581,21 +608,15 @@ function recalc(){
   // Header
   $('hdr-name').textContent = name;
   $('hdr-yrs').textContent  = yrs+' yrs';
-  const asof = $('f-asof')?.value;
-  const asofEl = $('hdr-asof');
-  if(asofEl){
-    if(asof){
-      const d = new Date(asof);
-      const datePart = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-      const timePart = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-      asofEl.innerHTML = datePart+'<br><span style="font-size:11px;opacity:.75">'+timePart+'</span>';
-    } else {
-      asofEl.textContent = '—';
-    }
-  }
 
   // ── New inputs ──
   const ssAge    = n('f-ssage') || 67;
+  const ssYearEl = $('ss-start-year');
+  if(ssYearEl) ssYearEl.textContent = age > 0 ? `est. ${new Date().getFullYear() + Math.max(0, ssAge - age)}` : '';
+  const pe       = n('f-pe') || 0;
+  const peAge    = n('f-peage') || 65;
+  const peYearEl = $('pe-start-year');
+  if(peYearEl) peYearEl.textContent = age > 0 ? `est. ${new Date().getFullYear() + Math.max(0, peAge - age)}` : '';
   const rentalMo = n('f-rental') || 0;
   const rentalAnn = rentalMo * 12;
 
@@ -605,8 +626,8 @@ function recalc(){
   let retPort    = ret;            // retirement accounts (locked until 59.5)
   const rcAges=[], rcPort=[], rcTgt=[], rcNonRetAcc=[], rcRetAcc=[], rcCashAcc=[], rcEquityAcc=[];
 
-  // Target: what portfolio needs to provide after SS and rental (today's $)
-  const incomeFromPortfolio = Math.max(0, rin - ss*12 - rentalAnn);
+  // Target: what portfolio needs to provide after SS, pension, and rental (today's $)
+  const incomeFromPortfolio = Math.max(0, rin - ss*12 - pe*12 - rentalAnn);
   const portTarget = incomeFromPortfolio / 0.04;
 
   for(let y=0;y<=yrs;y++){
@@ -641,9 +662,9 @@ function recalc(){
   let penaltyYears = 0;
 
   // Per-phase income source trackers (cash excluded from retirement projections)
-  const ph1={yrs:0,equity:0,ret:0,rental:0,ss:0,penalty:0};
-  const ph2={yrs:0,equity:0,ret:0,rental:0,ss:0};
-  const ph3={yrs:0,equity:0,ret:0,rental:0,ss:0};
+  const ph1={yrs:0,equity:0,ret:0,rental:0,ss:0,pension:0,penalty:0,shortfall:0};
+  const ph2={yrs:0,equity:0,ret:0,rental:0,ss:0,pension:0,shortfall:0};
+  const ph3={yrs:0,equity:0,ret:0,rental:0,ss:0,pension:0,shortfall:0};
 
   // Draw from equity only (cash excluded from retirement projections)
   const drawNonRet = (needed) => {
@@ -654,11 +675,12 @@ function recalc(){
   };
 
   for(let y=0;y<=30;y++){
-    const ageNow   = retAge + y;
-    const inflAdj  = Math.pow(1+i2, y);
-    const ssIncome = (ageNow >= ssAge) ? ss*12 : 0;
-    const desired  = rin * inflAdj;
-    let   needed   = Math.max(0, desired - ssIncome - rentalAnn);
+    const ageNow    = retAge + y;
+    const inflAdj   = Math.pow(1+i2, y);
+    const ssIncome  = (ageNow >= ssAge) ? ss*12 : 0;
+    const peIncome  = (ageNow >= peAge) ? pe*12 : 0;
+    const desired   = rin * inflAdj;
+    let   needed    = Math.max(0, desired - ssIncome - peIncome - rentalAnn);
 
     pcAges.push(ageNow);
     pcEquity.push(Math.max(0, Math.round(pEquity)));
@@ -678,20 +700,29 @@ function recalc(){
         if(!earlyPenaltyTriggered){ earlyPenaltyTriggered = true; }
         penaltyYears++;
       }
+      if(drawn.shortfall > 0 && pRet < drawn.shortfall * PENALTY) ph1.shortfall += drawn.shortfall;
       ph1.yrs++;  ph1.equity+=drawn.dEquity;  ph1.ret+=drawnRetNet;
-      ph1.rental+=rentalAnn;  ph1.penalty+=drawnPenalty;
+      ph1.rental+=rentalAnn;  ph1.pension+=peIncome;  ph1.penalty+=drawnPenalty;
 
     } else if(ageNow < ssAge){
       // Phase 2 — equity first, then retirement penalty-free, no SS
-      if(drawn.shortfall > 0){ pRet -= drawn.shortfall; drawnRetNet = drawn.shortfall; }
+      if(drawn.shortfall > 0){
+        const canDraw = Math.min(pRet, drawn.shortfall);
+        pRet -= canDraw; drawnRetNet = canDraw;
+        if(canDraw < drawn.shortfall) ph2.shortfall += drawn.shortfall - canDraw;
+      }
       ph2.yrs++;  ph2.equity+=drawn.dEquity;  ph2.ret+=drawnRetNet;
-      ph2.rental+=rentalAnn;
+      ph2.rental+=rentalAnn;  ph2.pension+=peIncome;
 
     } else {
       // Phase 3 — SS offsets need, then equity → retirement
-      if(drawn.shortfall > 0){ pRet -= drawn.shortfall; drawnRetNet = drawn.shortfall; }
+      if(drawn.shortfall > 0){
+        const canDraw = Math.min(pRet, drawn.shortfall);
+        pRet -= canDraw; drawnRetNet = canDraw;
+        if(canDraw < drawn.shortfall) ph3.shortfall += drawn.shortfall - canDraw;
+      }
       ph3.yrs++;  ph3.equity+=drawn.dEquity;  ph3.ret+=drawnRetNet;
-      ph3.rental+=rentalAnn;  ph3.ss+=ssIncome;
+      ph3.rental+=rentalAnn;  ph3.ss+=ssIncome;  ph3.pension+=peIncome;
     }
 
     pEquity = Math.max(0, pEquity) * (1+r);
@@ -700,7 +731,7 @@ function recalc(){
 
   // ── College projections ──
   const collResults = kids.map(k=>{
-    if(!k.on||!k.name) return null;
+    if(!k.name) return null;
     const ytc=Math.max(0,18-k.age);
     let b=k.bal;
     for(let y=0;y<ytc;y++) b=b*1.06+k.mo*12;
@@ -831,7 +862,7 @@ function recalc(){
       const earlyPhaseYrs = +(59.5 - retAge).toFixed(1);
       phases.push({
         label:`Phase 1 — Age ${retAge} to 59½ (${earlyPhaseYrs} yrs) · After-Tax Savings Only`,
-        icon:'🔒', color:'#fef3c7', border:'#fcd34d', textColor:'#92400e',
+        icon:'🔒', color:'#f3f4f6', border:'#d1d5db', textColor:'#374151',
         lines:[
           `⚠️ Retirement accounts (401k/IRA) are locked — 10% IRS penalty applies`,
           `Cash: ${fmtS(ppCash)} · Equity Portfolio: ${fmtS(ppEquity)} at retirement`,
@@ -839,21 +870,28 @@ function recalc(){
             ? '❌ After-tax savings projected to run out before 59½ — penalty withdrawals likely needed'
             : '✅ After-tax savings projected sufficient to bridge to age 59½ penalty-free'
         ],
-        sourcesHtml: buildSourcesHtml(ph1, '#92400e', 'phase-pie-1')
+        ph: ph1,
+        sourcesHtml: buildSourcesHtml(ph1, '#374151', 'phase-pie-1')
       });
     } else {
-      // Retiring AFTER 59.5 — show as informational context
+      // Retiring AFTER 59.5 — synthesize a year-1 income snapshot for the pie chart
       const yearsAlreadyPast = +(retAge - 59.5).toFixed(1);
+      const ssAtRetirement   = ssAge <= retAge ? ss * 12 : 0;
+      const peAtRetirement   = peAge <= retAge ? pe * 12 : 0;
+      const yr1Need          = Math.max(0, rin - rentalAnn - ssAtRetirement - peAtRetirement);
+      const yr1Equity        = Math.min(ppEquity, yr1Need);
+      const yr1Ret           = Math.max(0, yr1Need - yr1Equity);
+      const ph1Synthetic     = { yrs:1, equity:yr1Equity, ret:yr1Ret, rental:rentalAnn, ss:ssAtRetirement, pension:peAtRetirement };
       phases.push({
         label:`Phase 1 — Before Age 59½ · After-Tax Savings Only (Informational)`,
         icon:'🔒', color:'#f3f4f6', border:'#d1d5db', textColor:'#374151',
         lines:[
           `You plan to retire at ${retAge}, already ${yearsAlreadyPast} yrs past the 59½ threshold`,
-          `During working years: only after-tax savings (brokerage/cash) and rental income`,
-          `are accessible without penalty — retirement accounts remain locked until 59½`,
-          `✅ No early withdrawal risk — retirement accounts fully accessible on Day 1`
+          `Equity Portfolio at retirement: ${fmtS(ppEquity)} · Retirement Accounts: ${fmtS(ppRet)}`,
+          `✅ No early withdrawal risk — all accounts fully accessible on Day 1`
         ],
-        sourcesHtml: ''   // informational only — no retirement drawdown data yet
+        ph: ph1,
+        sourcesHtml: buildSourcesHtml(ph1Synthetic, '#374151', 'phase-pie-1')
       });
     }
 
@@ -864,34 +902,48 @@ function recalc(){
       const p2Yrs = +(p2End - p2Start).toFixed(1);
       phases.push({
         label:`Phase 2 — Age ${early59?'59½':retAge} to ${p2End} (${p2Yrs} yrs) · Penalty-Free Access`,
-        icon:'🔓', color:'#eff6ff', border:'#bfdbfe', textColor:'#1e40af',
+        icon:'🔓', color:'#f0fdf4', border:'#bbf7d0', textColor:'#166534',
         lines:[
           `Retirement accounts (401k/IRA/Roth) now fully accessible penalty-free`,
           `Strategy: draw from after-tax savings first, then retirement accounts`,
           `No Social Security income yet (starts at age ${ssAge})`
         ],
-        sourcesHtml: buildSourcesHtml(ph2, '#1e40af', 'phase-pie-2')
+        ph: ph2,
+        sourcesHtml: buildSourcesHtml(ph2, '#166534', 'phase-pie-2')
       });
     }
 
     // ── Phase 3: SS Age+ — Full Retirement Income ─────────────────────────
     phases.push({
       label:`Phase 3 — Age ${ssAge}+ · Social Security Begins`,
-      icon:'💰', color:'#f0fdf4', border:'#bbf7d0', textColor:'#166534',
+      icon:'💰', color:'#dcfce7', border:'#4ade80', textColor:'#14532d',
       lines:[
-        `Social Security: $${ss.toLocaleString()}/mo · ${fmt(ss*12)}/yr`,
-        `Portfolio only needs to cover: ${fmt(Math.max(0, rin - ss*12 - rentalAnn))}/yr`,
-        `Combined guaranteed income: ${fmt(ss*12 + rentalAnn)}/yr`
+        `Social Security: $${ss.toLocaleString()}/mo · ${fmt(ss*12)}/yr`
+          + (pe>0 ? ` · Pension: $${pe.toLocaleString()}/mo · ${fmt(pe*12)}/yr` : ''),
+        `Portfolio only needs to cover: ${fmt(Math.max(0, rin - ss*12 - pe*12 - rentalAnn))}/yr`,
+        `Combined guaranteed income: ${fmt(ss*12 + pe*12 + rentalAnn)}/yr`
       ],
-      sourcesHtml: buildSourcesHtml(ph3, '#166534', 'phase-pie-3')
+      ph: ph3,
+      sourcesHtml: buildSourcesHtml(ph3, '#14532d', 'phase-pie-3')
     });
 
-    phasesEl.innerHTML = phases.map(p=>`
-      <div style="background:${p.color};border:1px solid ${p.border};border-radius:12px;padding:14px 16px;margin-bottom:10px">
-        <div style="font-weight:700;font-size:13px;color:${p.textColor};margin-bottom:8px">${p.icon} ${p.label}</div>
-        ${p.lines.map(l=>`<div style="font-size:12px;color:${p.textColor};opacity:.85;margin-bottom:3px">• ${l}</div>`).join('')}
+    phasesEl.innerHTML = phases.map(p=>{
+      const hasShortfall = (p.ph?.shortfall||0) > 0;
+      const bg     = hasShortfall ? '#fef2f2' : p.color;
+      const border = hasShortfall ? '#fca5a5' : p.border;
+      const tc     = hasShortfall ? '#991b1b' : p.textColor;
+      const sfNote = hasShortfall
+        ? `<div style="font-size:12px;font-weight:700;color:#dc2626;margin-top:8px;padding:8px 10px;background:#fee2e2;border-radius:8px">
+            ⚠️ Portfolio runs out during this phase · Unmet income: ${fmt(p.ph.shortfall/p.ph.yrs)}/yr avg · Guaranteed income available: ${fmt((p.ph.rental+p.ph.ss+p.ph.pension)/p.ph.yrs)}/yr
+           </div>`
+        : '';
+      return `<div style="background:${bg};border:1px solid ${border};border-radius:12px;padding:14px 16px;margin-bottom:10px">
+        <div style="font-weight:700;font-size:13px;color:${tc};margin-bottom:8px">${p.icon} ${p.label}</div>
+        ${p.lines.map(l=>`<div style="font-size:12px;color:${tc};opacity:.85;margin-bottom:3px">• ${l}</div>`).join('')}
+        ${sfNote}
         ${p.sourcesHtml||''}
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   // Income analysis
@@ -900,6 +952,8 @@ function recalc(){
   $('ret-inc-rental-mo').textContent= rentalMo>0?'$'+rentalMo.toLocaleString()+'/mo':'—';
   $('ret-inc-ss').textContent       = fmt(ss*12);
   $('ret-inc-ss-mo').textContent    = 'Starts age '+ssAge+' · $'+ss.toLocaleString()+'/mo';
+  $('ret-inc-pe').textContent       = fmt(pe*12);
+  $('ret-inc-pe-mo').textContent    = pe>0 ? 'Starts age '+peAge+' · $'+pe.toLocaleString()+'/mo' : '—';
   $('ret-inc-needed').textContent   = fmt(incomeFromPortfolio);
   $('ret-savrate').textContent      = inc>0?((ans/inc)*100).toFixed(1)+'%':'0%';
   $('ret-savamt').textContent       = fmt(ans)+'/yr saved';
@@ -969,10 +1023,10 @@ function recalc(){
 }
 
 // ── Save / Load / History ─────────────────────────────────────────────────────
-const FIELD_IDS = ['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt',
+const FIELD_IDS = ['f-name','f-age','f-retage','f-chk','f-sav','f-mkt',
   'f-brok','f-rsu','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro',
   'f-veh','f-oth','f-cl1','f-cl2','f-cc','f-sl','f-od',
-  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-rental'];
+  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-pe','f-peage','f-rental'];
 const MAX_VERSIONS = 20;
 
 function currentNetWorth(){
@@ -1014,8 +1068,8 @@ function loadVersions(){
 
 function applySnapshot(data){
   if(data.fields) Object.entries(data.fields).forEach(([id,val])=>{ const el=$(id); if(el) el.value=val; });
-  if(data.props)  data.props.forEach((p,i)=>{ if(props[i]) Object.assign(props[i],p); });
-  if(data.kids)   data.kids.forEach((k,i)=>{ if(kids[i]) Object.assign(kids[i],k); });
+  if(data.props){ props.length=0; data.props.forEach(p=>props.push(Object.assign({},p))); }
+  if(data.kids){  kids.length=0;  data.kids.forEach(k=>kids.push(Object.assign({},k))); }
 }
 
 function updateSaveMeta(isoStr){
@@ -1106,22 +1160,16 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 
 // ── Wire up all simple inputs ────────────────────────────────────────────────
-['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
+['f-name','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
  'f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth',
  'f-cl1','f-cl2','f-cc','f-sl','f-od',
- 'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-rental'
+ 'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-pe','f-peage','f-rental'
 ].forEach(id=>{
   const el=$(id);
   if(el) el.addEventListener('input', recalc);
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-// Set current date+time as default for as-of field (datetime-local needs "YYYY-MM-DDTHH:MM")
-const now = new Date();
-const pad = n => String(n).padStart(2,'0');
-const nowLocal = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+'T'+pad(now.getHours())+':'+pad(now.getMinutes());
-$('f-asof').value = nowLocal;
-
 loadData();   // restore any previously saved data
 buildProps(); // build dynamic sections (uses loaded state)
 buildKids();
