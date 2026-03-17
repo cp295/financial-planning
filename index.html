@@ -278,7 +278,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
     <!-- Summary tiles -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
       <div class="tile tile-blue"><div class="t-lbl">Years to Retirement</div><div class="t-val" id="ret-yrs">0</div></div>
-      <div class="tile tile-purple"><div class="t-lbl">Non-Ret. Portfolio</div><div class="t-val" id="ret-nonret">$0</div><div class="t-sub">at retirement</div></div>
+      <div class="tile tile-purple"><div class="t-lbl">Equity Portfolio</div><div class="t-val" id="ret-nonret">$0</div><div class="t-sub">at retirement (excl. cash)</div></div>
       <div class="tile tile-orange"><div class="t-lbl">Retirement Accounts</div><div class="t-val" id="ret-retacc">$0</div><div class="t-sub">at retirement</div></div>
       <div class="tile tile-yellow"><div class="t-lbl">Target (4% rule)</div><div class="t-val" id="ret-tgt">$0</div></div>
       <div class="tile tile-green" id="ret-gap-tile">
@@ -615,7 +615,7 @@ function recalc(){
     rcEquityAcc.push(Math.round(equityPort));
     rcNonRetAcc.push(Math.round(cashPort + equityPort));
     rcRetAcc.push(Math.round(retPort));
-    rcPort.push(Math.round(cashPort + equityPort + retPort));
+    rcPort.push(Math.round(equityPort + retPort));   // cash excluded from retirement projection
     rcTgt.push(Math.round(portTarget));
     cashPort   = cashPort   * (1+r);
     equityPort = equityPort * (1+r);
@@ -623,9 +623,9 @@ function recalc(){
   }
   const ppCash   = rcCashAcc[rcCashAcc.length-1]    || 0;
   const ppEquity = rcEquityAcc[rcEquityAcc.length-1] || 0;
-  const ppNonRet = ppCash + ppEquity;
+  const ppNonRet = ppCash + ppEquity;   // used for pre-59.5 coverage check
   const ppRet    = rcRetAcc[rcRetAcc.length-1]       || 0;
-  const pp       = ppNonRet + ppRet;
+  const pp       = ppEquity + ppRet;    // cash excluded — not a long-term investment asset
   const gap      = pp - portTarget;
 
   const nwEl = $('hdr-nw');
@@ -802,7 +802,7 @@ function recalc(){
 
   // ── Update Retirement tab ──
   $('ret-yrs').textContent       = yrs;
-  $('ret-nonret').textContent    = fmtS(ppNonRet);
+  $('ret-nonret').textContent    = fmtS(ppEquity);
   $('ret-retacc').textContent    = fmtS(ppRet);
   $('ret-tgt').textContent       = fmtS(portTarget);
   $('ret-gap-val').textContent   = fmtS(Math.abs(gap));
@@ -918,7 +918,7 @@ function recalc(){
   if(l1ctx) chartLine1 = new Chart(l1ctx,{
     type:'line',
     data:{labels:rcAges,datasets:[
-      {label:'Total Portfolio',    data:rcPort,       borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Invested Portfolio',  data:rcPort,       borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
       {label:'Cash & Equivalents', data:rcCashAcc,    borderColor:'#0891b2',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[3,2]},
       {label:'Equity Portfolio',   data:rcEquityAcc,  borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
       {label:'Retirement Accounts',data:rcRetAcc,     borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
