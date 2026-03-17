@@ -309,18 +309,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       <div class="card-title">🗓️ Retirement Phase Analysis</div>
       <div id="ret-phases"></div>
     </div>
-    <!-- Income analysis -->
-    <div class="card gap">
-      <div class="card-title">Income Sources in Retirement</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:20px">
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Desired Annual Income</div><div style="font-size:20px;font-weight:700" id="ret-inc-desired">$0</div><div style="font-size:11px;color:#9ca3af">in today's dollars</div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Rental Income (annual)</div><div style="font-size:20px;font-weight:700" id="ret-inc-rental">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-rental-mo"></div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Social Security</div><div style="font-size:20px;font-weight:700" id="ret-inc-ss">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-ss-mo"></div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Pension Income</div><div style="font-size:20px;font-weight:700" id="ret-inc-pe">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-pe-mo"></div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Needed from Portfolio</div><div style="font-size:20px;font-weight:700" id="ret-inc-needed">$0</div><div style="font-size:11px;color:#9ca3af">annually at retirement</div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Savings Rate</div><div style="font-size:20px;font-weight:700" id="ret-savrate">0%</div><div style="font-size:11px;color:#9ca3af" id="ret-savamt"></div></div>
-      </div>
-    </div>
   </div>
 
   <!-- ── TAB 3: COLLEGE ────────────────────────────────────────────────── -->
@@ -946,17 +934,6 @@ function recalc(){
     }).join('');
   }
 
-  // Income analysis
-  $('ret-inc-desired').textContent  = fmt(rin);
-  $('ret-inc-rental').textContent   = fmt(rentalAnn);
-  $('ret-inc-rental-mo').textContent= rentalMo>0?'$'+rentalMo.toLocaleString()+'/mo':'—';
-  $('ret-inc-ss').textContent       = fmt(ss*12);
-  $('ret-inc-ss-mo').textContent    = 'Starts age '+ssAge+' · $'+ss.toLocaleString()+'/mo';
-  $('ret-inc-pe').textContent       = fmt(pe*12);
-  $('ret-inc-pe-mo').textContent    = pe>0 ? 'Starts age '+peAge+' · $'+pe.toLocaleString()+'/mo' : '—';
-  $('ret-inc-needed').textContent   = fmt(incomeFromPortfolio);
-  $('ret-savrate').textContent      = inc>0?((ans/inc)*100).toFixed(1)+'%':'0%';
-  $('ret-savamt').textContent       = fmt(ans)+'/yr saved';
 
   // Line chart 1 — growth
   if(chartLine1){ chartLine1.destroy(); }
