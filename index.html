@@ -342,6 +342,31 @@ const $  = id => document.getElementById(id);
 const n  = id => parseFloat($(id)?.value)||0;
 const COLORS = ['#2563eb','#16a34a','#d97706','#7c3aed','#0891b2','#dc2626'];
 
+// ── Phase sources breakdown renderer ─────────────────────────────────────────
+function buildSourcesHtml(ph, textColor){
+  if(!ph||!ph.yrs) return '';
+  const yrs=ph.yrs;
+  const rows=[
+    {label:'After-Tax Savings',   avg:ph.nonRet/yrs,      color:'#f97316'},
+    {label:'Retirement Accounts', avg:(ph.ret||0)/yrs,    color:'#7c3aed'},
+    {label:'Rental Income',       avg:(ph.rental||0)/yrs, color:'#0891b2'},
+    {label:'Social Security',     avg:(ph.ss||0)/yrs,     color:'#16a34a'},
+  ].filter(r=>r.avg>1);
+  if(!rows.length) return '';
+  const maxAvg=Math.max(...rows.map(r=>r.avg));
+  return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1)">
+    <div style="font-size:11px;font-weight:700;color:${textColor};opacity:.55;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Avg Annual Income Sources</div>
+    ${rows.map(r=>`<div style="margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:${textColor};margin-bottom:2px">
+        <span>${r.label}</span><span style="font-weight:700">${fmt(r.avg)}/yr</span>
+      </div>
+      <div style="background:rgba(0,0,0,.08);border-radius:999px;height:6px">
+        <div style="width:${maxAvg>0?(r.avg/maxAvg*100).toFixed(1):0}%;height:6px;border-radius:999px;background:${r.color}"></div>
+      </div></div>`).join('')}
+    ${(ph.penalty||0)>1?`<div style="font-size:11px;color:#dc2626;margin-top:6px;font-weight:600">⚠️ IRS Penalty Paid: ${fmt((ph.penalty)/yrs)}/yr avg · ${fmt(ph.penalty)} total</div>`:''}
+  </div>`;
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 const props = [
   {name:'Primary Residence',val:0,mort:0},
@@ -528,6 +553,11 @@ function recalc(){
   let earlyPenaltyTriggered = false;
   let penaltyYears = 0;
 
+  // Per-phase income source trackers (totals across all years in each phase)
+  const ph1={yrs:0,nonRet:0,ret:0,rental:0,ss:0,penalty:0};
+  const ph2={yrs:0,nonRet:0,ret:0,rental:0,ss:0};
+  const ph3={yrs:0,nonRet:0,ret:0,rental:0,ss:0};
+
   for(let y=0;y<=30;y++){
     const ageNow   = retAge + y;
     const inflAdj  = Math.pow(1+i2, y);
@@ -540,25 +570,54 @@ function recalc(){
     pcRetLine.push(Math.max(0, Math.round(pRet)));
     pcTotal.push(Math.max(0, Math.round(pNonRet + pRet)));
 
+    let drawnNonRet=0, drawnRetNet=0, drawnPenalty=0;
+
     if(ageNow < 59.5){
-      // Draw from non-retirement first; if depleted, pull from retirement with penalty
+      // Phase 1 — pre-59.5: non-ret first; retirement accounts with 10% penalty if depleted
       if(pNonRet >= needed){
+        drawnNonRet = needed;
         pNonRet -= needed;
       } else {
-        const fromRet = needed - pNonRet;
+        drawnNonRet = pNonRet;
+        const shortfall = needed - pNonRet;
         pNonRet = 0;
-        pRet -= fromRet * PENALTY;
-        if(fromRet > 0){ earlyPenaltyTriggered = true; penaltyYears++; }
+        pRet -= shortfall * PENALTY;   // gross up to cover penalty
+        drawnRetNet  = shortfall;
+        drawnPenalty = shortfall * 0.1;
+        if(shortfall > 0){ earlyPenaltyTriggered = true; penaltyYears++; }
       }
+      ph1.yrs++;  ph1.nonRet+=drawnNonRet;  ph1.ret+=drawnRetNet;
+      ph1.rental+=rentalAnn;  ph1.penalty+=drawnPenalty;
+
+    } else if(ageNow < ssAge){
+      // Phase 2 — 59.5 to SS age: penalty-free, no SS yet
+      if(pNonRet >= needed){
+        drawnNonRet = needed;
+        pNonRet -= needed;
+      } else {
+        drawnNonRet = pNonRet;
+        drawnRetNet = needed - pNonRet;
+        pRet -= drawnRetNet;
+        pNonRet = 0;
+      }
+      ph2.yrs++;  ph2.nonRet+=drawnNonRet;  ph2.ret+=drawnRetNet;
+      ph2.rental+=rentalAnn;
+
     } else {
-      // 59.5+: draw non-ret first, then ret penalty-free
+      // Phase 3 — SS age+: SS offsets portfolio need
       if(pNonRet >= needed){
+        drawnNonRet = needed;
         pNonRet -= needed;
       } else {
-        pRet -= (needed - pNonRet);
+        drawnNonRet = pNonRet;
+        drawnRetNet = needed - pNonRet;
+        pRet -= drawnRetNet;
         pNonRet = 0;
       }
+      ph3.yrs++;  ph3.nonRet+=drawnNonRet;  ph3.ret+=drawnRetNet;
+      ph3.rental+=rentalAnn;  ph3.ss+=ssIncome;
     }
+
     pNonRet = Math.max(0, pNonRet) * (1+r);
     pRet    = Math.max(0, pRet)    * (1+r);
   }
@@ -699,12 +758,12 @@ function recalc(){
         icon:'🔒', color:'#fef3c7', border:'#fcd34d', textColor:'#92400e',
         lines:[
           `⚠️ Retirement accounts (401k/IRA) are locked — 10% IRS penalty applies`,
-          `Available sources: After-tax savings only (${fmtS(ppNonRet)} at retirement)`,
-          rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`,
+          `Starting after-tax savings: ${fmtS(ppNonRet)}`,
           earlyPenaltyTriggered
             ? '❌ After-tax savings projected to run out before 59½ — penalty withdrawals likely needed'
             : '✅ After-tax savings projected sufficient to bridge to age 59½ penalty-free'
-        ]
+        ],
+        sourcesHtml: buildSourcesHtml(ph1, '#92400e')
       });
     } else {
       // Retiring AFTER 59.5 — show as informational context
@@ -714,10 +773,11 @@ function recalc(){
         icon:'🔒', color:'#f3f4f6', border:'#d1d5db', textColor:'#374151',
         lines:[
           `You plan to retire at ${retAge}, already ${yearsAlreadyPast} yrs past the 59½ threshold`,
-          `During working years, only after-tax savings (brokerage/cash) and rental income`,
+          `During working years: only after-tax savings (brokerage/cash) and rental income`,
           `are accessible without penalty — retirement accounts remain locked until 59½`,
           `✅ No early withdrawal risk — retirement accounts fully accessible on Day 1`
-        ]
+        ],
+        sourcesHtml: ''   // informational only — no retirement drawdown data yet
       });
     }
 
@@ -732,9 +792,9 @@ function recalc(){
         lines:[
           `Retirement accounts (401k/IRA/Roth) now fully accessible penalty-free`,
           `Strategy: draw from after-tax savings first, then retirement accounts`,
-          `No Social Security income yet (starts at age ${ssAge})`,
-          rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`
-        ]
+          `No Social Security income yet (starts at age ${ssAge})`
+        ],
+        sourcesHtml: buildSourcesHtml(ph2, '#1e40af')
       });
     }
 
@@ -743,16 +803,18 @@ function recalc(){
       label:`Phase 3 — Age ${ssAge}+ · Social Security Begins`,
       icon:'💰', color:'#f0fdf4', border:'#bbf7d0', textColor:'#166534',
       lines:[
-        `Social Security income: ${fmt(ss*12)}/yr ($${ss.toLocaleString()}/mo)`,
-        rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`,
+        `Social Security: $${ss.toLocaleString()}/mo · ${fmt(ss*12)}/yr`,
         `Portfolio only needs to cover: ${fmt(Math.max(0, rin - ss*12 - rentalAnn))}/yr`,
         `Combined guaranteed income: ${fmt(ss*12 + rentalAnn)}/yr`
-      ]
+      ],
+      sourcesHtml: buildSourcesHtml(ph3, '#166534')
     });
+
     phasesEl.innerHTML = phases.map(p=>`
       <div style="background:${p.color};border:1px solid ${p.border};border-radius:12px;padding:14px 16px;margin-bottom:10px">
         <div style="font-weight:700;font-size:13px;color:${p.textColor};margin-bottom:8px">${p.icon} ${p.label}</div>
         ${p.lines.map(l=>`<div style="font-size:12px;color:${p.textColor};opacity:.85;margin-bottom:3px">• ${l}</div>`).join('')}
+        ${p.sourcesHtml||''}
       </div>`).join('');
   }
 
