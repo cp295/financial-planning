@@ -226,7 +226,11 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
         <label class="field-label">Annual Household Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-inc" value="120000" min="0"/></div>
         <label class="field-label">Annual Amount Saved for Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ans" value="24000" min="0"/></div>
         <label class="field-label">Desired Annual Retirement Income (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rin" value="90000" min="0"/></div>
-        <label class="field-label">Expected Monthly Social Security</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ss" value="2200" min="0"/></div>
+        <div class="row2">
+          <div><label class="field-label">Expected Monthly Social Security</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ss" value="2200" min="0"/></div></div>
+          <div><label class="field-label">Social Security Start Age</label><div class="field-wrap"><input type="number" id="f-ssage" value="67" min="62" max="70"/></div></div>
+        </div>
+        <label class="field-label">Monthly Rental Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rental" value="0" min="0"/></div>
         <div class="row2">
           <div><label class="field-label">Expected Annual Return</label><div class="field-wrap"><input type="number" class="has-r" id="f-rer" value="7" step="0.1" min="0" max="30"/><span class="sym sym-r">%</span></div></div>
           <div><label class="field-label">Inflation Rate</label><div class="field-wrap"><input type="number" class="has-r" id="f-inf" value="3" step="0.1" min="0" max="20"/><span class="sym sym-r">%</span></div></div>
@@ -273,9 +277,11 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 
   <!-- ── TAB 2: RETIREMENT ─────────────────────────────────────────────── -->
   <div class="tab-panel" id="panel-2">
-    <div class="grid4">
+    <!-- Summary tiles -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
       <div class="tile tile-blue"><div class="t-lbl">Years to Retirement</div><div class="t-val" id="ret-yrs">0</div></div>
-      <div class="tile tile-purple"><div class="t-lbl">Projected Portfolio</div><div class="t-val" id="ret-pp">$0</div></div>
+      <div class="tile tile-purple"><div class="t-lbl">Non-Ret. Portfolio</div><div class="t-val" id="ret-nonret">$0</div><div class="t-sub">at retirement</div></div>
+      <div class="tile tile-orange"><div class="t-lbl">Retirement Accounts</div><div class="t-val" id="ret-retacc">$0</div><div class="t-sub">at retirement</div></div>
       <div class="tile tile-yellow"><div class="t-lbl">Target (4% rule)</div><div class="t-val" id="ret-tgt">$0</div></div>
       <div class="tile tile-green" id="ret-gap-tile">
         <div class="t-lbl" id="ret-gap-lbl">Projected Surplus</div>
@@ -283,17 +289,29 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
         <div class="t-sub" id="ret-gap-sub">You're on track 🎉</div>
       </div>
     </div>
+    <!-- Early withdrawal warning -->
+    <div id="ret-penalty-warn" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#92400e">
+      ⚠️ <strong>Early Withdrawal Risk:</strong> <span id="ret-penalty-msg"></span>
+    </div>
+    <!-- Charts -->
     <div class="grid2">
       <div class="card"><div class="card-title">Portfolio Growth to Retirement</div><canvas id="chart-line1" height="240"></canvas></div>
-      <div class="card"><div class="card-title">Portfolio Drawdown in Retirement (30 yrs)</div><canvas id="chart-line2" height="240"></canvas></div>
+      <div class="card"><div class="card-title">Portfolio by Account Type in Retirement (30 yrs)</div><canvas id="chart-line2" height="240"></canvas></div>
     </div>
+    <!-- Phase analysis -->
     <div class="card gap">
-      <div class="card-title">Retirement Income Analysis</div>
-      <div class="grid4">
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Desired Annual Income</div><div style="font-size:22px;font-weight:700" id="ret-inc-desired">$0</div><div style="font-size:11px;color:#9ca3af">in today's dollars</div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Social Security (annual)</div><div style="font-size:22px;font-weight:700" id="ret-inc-ss">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-ss-mo"></div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Needed from Portfolio</div><div style="font-size:22px;font-weight:700" id="ret-inc-needed">$0</div><div style="font-size:11px;color:#9ca3af">annually (4% rule)</div></div>
-        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Savings Rate</div><div style="font-size:22px;font-weight:700" id="ret-savrate">0%</div><div style="font-size:11px;color:#9ca3af" id="ret-savamt"></div></div>
+      <div class="card-title">🗓️ Retirement Phase Analysis</div>
+      <div id="ret-phases"></div>
+    </div>
+    <!-- Income analysis -->
+    <div class="card gap">
+      <div class="card-title">Income Sources in Retirement</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:20px">
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Desired Annual Income</div><div style="font-size:20px;font-weight:700" id="ret-inc-desired">$0</div><div style="font-size:11px;color:#9ca3af">in today's dollars</div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Rental Income (annual)</div><div style="font-size:20px;font-weight:700" id="ret-inc-rental">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-rental-mo"></div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Social Security</div><div style="font-size:20px;font-weight:700" id="ret-inc-ss">$0</div><div style="font-size:11px;color:#9ca3af" id="ret-inc-ss-mo"></div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Needed from Portfolio</div><div style="font-size:20px;font-weight:700" id="ret-inc-needed">$0</div><div style="font-size:11px;color:#9ca3af">annually at retirement</div></div>
+        <div><div style="font-size:12px;color:#6b7280;margin-bottom:4px">Savings Rate</div><div style="font-size:20px;font-weight:700" id="ret-savrate">0%</div><div style="font-size:11px;color:#9ca3af" id="ret-savamt"></div></div>
       </div>
     </div>
   </div>
@@ -470,29 +488,79 @@ function recalc(){
     $('hdr-asof').textContent = '—';
   }
 
-  // ── Retirement projection ──
-  let port = ret+inv;
-  const rcAges=[], rcPort=[], rcTgt=[];
+  // ── New inputs ──
+  const ssAge    = n('f-ssage') || 67;
+  const rentalMo = n('f-rental') || 0;
+  const rentalAnn = rentalMo * 12;
+
+  // ── Accumulation phase: track ret and non-ret separately ──
+  let retPort    = ret;           // locked until 59.5
+  let nonRetPort = inv + cash;    // accessible anytime
+  const rcAges=[], rcPort=[], rcTgt=[], rcNonRetAcc=[], rcRetAcc=[];
+
+  // Target: what portfolio needs to provide after SS and rental (today's $)
+  const incomeFromPortfolio = Math.max(0, rin - ss*12 - rentalAnn);
+  const portTarget = incomeFromPortfolio / 0.04;
+
   for(let y=0;y<=yrs;y++){
     rcAges.push(age+y);
-    rcPort.push(Math.round(port));
-    rcTgt.push(Math.round(tgt));
-    port = port*(1+r)+ans;
+    rcNonRetAcc.push(Math.round(nonRetPort));
+    rcRetAcc.push(Math.round(retPort));
+    rcPort.push(Math.round(nonRetPort + retPort));
+    rcTgt.push(Math.round(portTarget));
+    nonRetPort = nonRetPort * (1+r);
+    retPort    = retPort * (1+r) + ans;
   }
-  const pp = rcPort[rcPort.length-1]||0;
-  const gap = pp-tgt;
+  const ppNonRet = rcNonRetAcc[rcNonRetAcc.length-1] || 0;
+  const ppRet    = rcRetAcc[rcRetAcc.length-1] || 0;
+  const pp       = ppNonRet + ppRet;
+  const gap      = pp - portTarget;
+
   $('hdr-nw').textContent   = fmt(nw);
   $('hdr-nw').style.color   = nw>=0?'white':'#fca5a5';
   $('hdr-pp').textContent   = fmtS(pp);
 
-  // Post-retirement 30 yrs
-  const wd = Math.max(0,rin-ss*12);
-  let pv=pp;
-  const pcAges=[], pcPort=[];
+  // ── Post-retirement phased drawdown (30 yrs) ──
+  const PENALTY = 1.10;  // 10% early withdrawal penalty → need 10% more gross
+  let pNonRet = ppNonRet;
+  let pRet    = ppRet;
+  const pcAges=[], pcNonRet=[], pcRetLine=[], pcTotal=[];
+  let earlyPenaltyTriggered = false;
+  let penaltyYears = 0;
+
   for(let y=0;y<=30;y++){
-    pcAges.push(retAge+y);
-    pcPort.push(Math.max(0,Math.round(pv)));
-    pv = pv*(1+r)-wd*Math.pow(1+i2,y);
+    const ageNow   = retAge + y;
+    const inflAdj  = Math.pow(1+i2, y);
+    const ssIncome = (ageNow >= ssAge) ? ss*12 : 0;
+    const desired  = rin * inflAdj;
+    let   needed   = Math.max(0, desired - ssIncome - rentalAnn);
+
+    pcAges.push(ageNow);
+    pcNonRet.push(Math.max(0, Math.round(pNonRet)));
+    pcRetLine.push(Math.max(0, Math.round(pRet)));
+    pcTotal.push(Math.max(0, Math.round(pNonRet + pRet)));
+
+    if(ageNow < 59.5){
+      // Draw from non-retirement first; if depleted, pull from retirement with penalty
+      if(pNonRet >= needed){
+        pNonRet -= needed;
+      } else {
+        const fromRet = needed - pNonRet;
+        pNonRet = 0;
+        pRet -= fromRet * PENALTY;
+        if(fromRet > 0){ earlyPenaltyTriggered = true; penaltyYears++; }
+      }
+    } else {
+      // 59.5+: draw non-ret first, then ret penalty-free
+      if(pNonRet >= needed){
+        pNonRet -= needed;
+      } else {
+        pRet -= (needed - pNonRet);
+        pNonRet = 0;
+      }
+    }
+    pNonRet = Math.max(0, pNonRet) * (1+r);
+    pRet    = Math.max(0, pRet)    * (1+r);
   }
 
   // ── College projections ──
@@ -591,19 +659,112 @@ function recalc(){
 
   // ── Update Retirement tab ──
   $('ret-yrs').textContent       = yrs;
-  $('ret-pp').textContent        = fmtS(pp);
-  $('ret-tgt').textContent       = fmtS(tgt);
+  $('ret-nonret').textContent    = fmtS(ppNonRet);
+  $('ret-retacc').textContent    = fmtS(ppRet);
+  $('ret-tgt').textContent       = fmtS(portTarget);
   $('ret-gap-val').textContent   = fmtS(Math.abs(gap));
   $('ret-gap-lbl').textContent   = gap>=0?'Projected Surplus':'Projected Shortfall';
   $('ret-gap-sub').textContent   = gap>=0?"You're on track 🎉":"Consider saving more ⚠️";
   const gapTile = $('ret-gap-tile');
   if(gapTile) gapTile.className = 'tile '+(gap>=0?'tile-green':'tile-red');
-  $('ret-inc-desired').textContent = fmt(rin);
-  $('ret-inc-ss').textContent      = fmt(ss*12);
-  $('ret-inc-ss-mo').textContent   = '$'+ss.toLocaleString()+'/mo';
-  $('ret-inc-needed').textContent  = fmt(Math.max(0,rin-ss*12));
-  $('ret-savrate').textContent     = inc>0?((ans/inc)*100).toFixed(1)+'%':'0%';
-  $('ret-savamt').textContent      = fmt(ans)+'/yr saved';
+
+  // Early withdrawal warning
+  const warnEl = $('ret-penalty-warn');
+  const msgEl  = $('ret-penalty-msg');
+  if(retAge < 59.5){
+    const yearsEarly = +(59.5 - retAge).toFixed(1);
+    if(warnEl) warnEl.style.display = 'block';
+    if(msgEl) msgEl.textContent = `You plan to retire at ${retAge}, which is ${yearsEarly} years before the penalty-free age of 59½. `
+      + (earlyPenaltyTriggered
+          ? `The model projects your non-retirement assets will be depleted before 59½, requiring retirement account withdrawals subject to a 10% IRS penalty.`
+          : `Your non-retirement assets (${fmtS(ppNonRet)}) should cover living expenses until age 59½ without triggering the penalty.`);
+  } else {
+    if(warnEl) warnEl.style.display = 'none';
+  }
+
+  // Phase analysis
+  const phasesEl = $('ret-phases');
+  if(phasesEl){
+    const phases = [];
+    const early59 = retAge < 59.5;
+
+    // ── Phase 1: Before 59½ — After-Tax Savings Only ──────────────────────
+    // Always shown. Explains the critical constraint that retirement accounts
+    // are inaccessible without a 10% penalty before age 59½.
+    if(early59){
+      // Retiring BEFORE 59.5 — this is an active retirement phase
+      const earlyPhaseYrs = +(59.5 - retAge).toFixed(1);
+      phases.push({
+        label:`Phase 1 — Age ${retAge} to 59½ (${earlyPhaseYrs} yrs) · After-Tax Savings Only`,
+        icon:'🔒', color:'#fef3c7', border:'#fcd34d', textColor:'#92400e',
+        lines:[
+          `⚠️ Retirement accounts (401k/IRA) are locked — 10% IRS penalty applies`,
+          `Available sources: After-tax savings only (${fmtS(ppNonRet)} at retirement)`,
+          rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`,
+          earlyPenaltyTriggered
+            ? '❌ After-tax savings projected to run out before 59½ — penalty withdrawals likely needed'
+            : '✅ After-tax savings projected sufficient to bridge to age 59½ penalty-free'
+        ]
+      });
+    } else {
+      // Retiring AFTER 59.5 — show as informational context
+      const yearsAlreadyPast = +(retAge - 59.5).toFixed(1);
+      phases.push({
+        label:`Phase 1 — Before Age 59½ · After-Tax Savings Only (Informational)`,
+        icon:'🔒', color:'#f3f4f6', border:'#d1d5db', textColor:'#374151',
+        lines:[
+          `You plan to retire at ${retAge}, already ${yearsAlreadyPast} yrs past the 59½ threshold`,
+          `During working years, only after-tax savings (brokerage/cash) and rental income`,
+          `are accessible without penalty — retirement accounts remain locked until 59½`,
+          `✅ No early withdrawal risk — retirement accounts fully accessible on Day 1`
+        ]
+      });
+    }
+
+    // ── Phase 2: Age 59½ to SS Start — Penalty-Free Access ───────────────
+    const p2Start = early59 ? 59.5 : retAge;
+    const p2End   = ssAge > p2Start ? ssAge : null;
+    if(p2End){
+      const p2Yrs = +(p2End - p2Start).toFixed(1);
+      phases.push({
+        label:`Phase 2 — Age ${early59?'59½':retAge} to ${p2End} (${p2Yrs} yrs) · Penalty-Free Access`,
+        icon:'🔓', color:'#eff6ff', border:'#bfdbfe', textColor:'#1e40af',
+        lines:[
+          `Retirement accounts (401k/IRA/Roth) now fully accessible penalty-free`,
+          `Strategy: draw from after-tax savings first, then retirement accounts`,
+          `No Social Security income yet (starts at age ${ssAge})`,
+          rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`
+        ]
+      });
+    }
+
+    // ── Phase 3: SS Age+ — Full Retirement Income ─────────────────────────
+    phases.push({
+      label:`Phase 3 — Age ${ssAge}+ · Social Security Begins`,
+      icon:'💰', color:'#f0fdf4', border:'#bbf7d0', textColor:'#166534',
+      lines:[
+        `Social Security income: ${fmt(ss*12)}/yr ($${ss.toLocaleString()}/mo)`,
+        rentalAnn>0 ? `Rental income: ${fmt(rentalAnn)}/yr` : `No rental income entered`,
+        `Portfolio only needs to cover: ${fmt(Math.max(0, rin - ss*12 - rentalAnn))}/yr`,
+        `Combined guaranteed income: ${fmt(ss*12 + rentalAnn)}/yr`
+      ]
+    });
+    phasesEl.innerHTML = phases.map(p=>`
+      <div style="background:${p.color};border:1px solid ${p.border};border-radius:12px;padding:14px 16px;margin-bottom:10px">
+        <div style="font-weight:700;font-size:13px;color:${p.textColor};margin-bottom:8px">${p.icon} ${p.label}</div>
+        ${p.lines.map(l=>`<div style="font-size:12px;color:${p.textColor};opacity:.85;margin-bottom:3px">• ${l}</div>`).join('')}
+      </div>`).join('');
+  }
+
+  // Income analysis
+  $('ret-inc-desired').textContent  = fmt(rin);
+  $('ret-inc-rental').textContent   = fmt(rentalAnn);
+  $('ret-inc-rental-mo').textContent= rentalMo>0?'$'+rentalMo.toLocaleString()+'/mo':'—';
+  $('ret-inc-ss').textContent       = fmt(ss*12);
+  $('ret-inc-ss-mo').textContent    = 'Starts age '+ssAge+' · $'+ss.toLocaleString()+'/mo';
+  $('ret-inc-needed').textContent   = fmt(incomeFromPortfolio);
+  $('ret-savrate').textContent      = inc>0?((ans/inc)*100).toFixed(1)+'%':'0%';
+  $('ret-savamt').textContent       = fmt(ans)+'/yr saved';
 
   // Line chart 1 — growth
   if(chartLine1){ chartLine1.destroy(); }
@@ -611,20 +772,24 @@ function recalc(){
   if(l1ctx) chartLine1 = new Chart(l1ctx,{
     type:'line',
     data:{labels:rcAges,datasets:[
-      {label:'Projected Portfolio',data:rcPort,borderColor:'#2563eb',backgroundColor:'transparent',borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Total Portfolio',data:rcPort,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Non-Retirement Assets',data:rcNonRetAcc,borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Retirement Accounts',data:rcRetAcc,borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
       {label:'Target',data:rcTgt,borderColor:'#16a34a',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0,borderDash:[6,3]}
     ]},
     options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
       scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
   });
 
-  // Line chart 2 — drawdown
+  // Line chart 2 — drawdown by account type
   if(chartLine2){ chartLine2.destroy(); }
   const l2ctx = $('chart-line2')?.getContext('2d');
   if(l2ctx) chartLine2 = new Chart(l2ctx,{
     type:'line',
     data:{labels:pcAges,datasets:[
-      {label:'Portfolio Balance',data:pcPort,borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:2.5,pointRadius:0,tension:0.3}
+      {label:'Total Portfolio',data:pcTotal,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Non-Retirement Assets',data:pcNonRet,borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Retirement Accounts',data:pcRetLine,borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]}
     ]},
     options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
       scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
@@ -668,7 +833,7 @@ function recalc(){
 const FIELD_IDS = ['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt',
   'f-brok','f-rsu','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro',
   'f-veh','f-oth','f-cl1','f-cl2','f-cc','f-sl','f-od',
-  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss'];
+  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-rental'];
 const MAX_VERSIONS = 20;
 
 function currentNetWorth(){
@@ -805,7 +970,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 ['f-name','f-asof','f-age','f-retage','f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry',
  'f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth',
  'f-cl1','f-cl2','f-cc','f-sl','f-od',
- 'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss'
+ 'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-rental'
 ].forEach(id=>{
   const el=$(id);
   if(el) el.addEventListener('input', recalc);
