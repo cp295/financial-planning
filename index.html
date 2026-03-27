@@ -102,10 +102,11 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 .hist-restore{padding:5px 12px;font-size:12px;font-weight:600;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:7px;cursor:pointer;font-family:inherit;transition:background .1s}
 .hist-restore:hover{background:#dbeafe}
 .hist-current{font-size:11px;color:#16a34a;font-weight:600;padding:3px 8px;background:#f0fdf4;border-radius:999px;border:1px solid #bbf7d0}
-@media(max-width:680px){
+@media(max-width:780px){
   .grid3,.grid4{grid-template-columns:1fr 1fr}
   .hdr-stats{gap:12px}
   .tabbar-inner{overflow-x:auto}
+  #panel-4 > div{grid-template-columns:1fr!important}
 }
 </style>
 </head>
@@ -146,6 +147,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
     <button class="tab-btn" data-tab="1">💰 Net Worth</button>
     <button class="tab-btn" data-tab="2">🏖️ Retirement</button>
     <button class="tab-btn" data-tab="3">🎓 College</button>
+    <button class="tab-btn" data-tab="4">🚨 Crisis Simulator</button>
   </div>
 </div>
 
@@ -175,7 +177,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       <div class="card">
         <div class="card-title">📈 Investment Accounts</div>
         <label class="field-label">Taxable Brokerage</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-brok" value="0" min="0"/></div>
-        <label class="field-label">RSUs / Stock Options (vested)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rsu" value="0" min="0"/></div>
+        <label class="field-label">Annual Taxable Brokerage Contribution</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rsu" value="0" min="0"/></div>
         <label class="field-label">Crypto / Other</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-cry" value="0" min="0"/></div>
         <div class="subtotal blue"><span>Subtotal</span><span id="st-inv">$0</span></div>
       </div>
@@ -222,7 +224,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 
       <div class="card">
         <div class="card-title">🎯 Retirement Planning Inputs</div>
-        <label class="field-label">Annual Household Income</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-inc" value="120000" min="0"/></div>
         <label class="field-label">Annual Amount Saved for Retirement</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-ans" value="24000" min="0"/></div>
         <label class="field-label">Desired Annual Retirement Income (today's $)</label><div class="field-wrap"><span class="sym sym-l">$</span><input type="number" class="has-l" id="f-rin" value="90000" min="0"/></div>
         <div class="row2">
@@ -319,6 +320,29 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       <div class="em">🎓</div>
       <p>No children added yet</p>
       <small>Go to the Inputs tab → College Savings and enable children</small>
+    </div>
+  </div>
+
+  <!-- ── TAB 4: CRISIS SIMULATOR ──────────────────────────────────────────── -->
+  <div class="tab-panel" id="panel-4">
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start">
+
+      <!-- Left: Scenario picker -->
+      <div class="card" style="position:sticky;top:70px">
+        <div class="card-title">🚨 Select a Crisis Scenario</div>
+        <div id="crisis-scenario-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+        <div id="crisis-params" style="display:none;border-top:1px solid #e5e7eb;padding-top:14px"></div>
+      </div>
+
+      <!-- Right: Output -->
+      <div id="crisis-output">
+        <div class="card" style="text-align:center;padding:60px 20px">
+          <div style="font-size:48px;margin-bottom:12px">🔍</div>
+          <div style="font-size:16px;font-weight:600;color:#374151">Select a scenario to see its impact on your retirement</div>
+          <div style="font-size:13px;color:#9ca3af;margin-top:6px">Your current financial data will be used automatically</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -559,7 +583,8 @@ function recalc(){
   const age    = n('f-age');
   const retAge = n('f-retage');
   const cash   = n('f-chk')+n('f-sav')+n('f-mkt');
-  const inv    = n('f-brok')+n('f-rsu')+n('f-cry');
+  const inv    = n('f-brok')+n('f-cry');
+  const annBrok = n('f-rsu');   // annual contribution to taxable brokerage, stops at retirement
   const ret    = n('f-k1')+n('f-rk')+n('f-ir')+n('f-ri')+n('f-ro');
   const reV    = props.reduce((s,p)=>s+p.val,0);
   const reM    = props.reduce((s,p)=>s+p.mort,0);
@@ -568,7 +593,6 @@ function recalc(){
   const nonMortLiab = n('f-cl1')+n('f-cl2')+n('f-cc')+n('f-sl')+n('f-od');
   const totL   = reM+nonMortLiab;
   const nw     = totA-totL;
-  const inc    = n('f-inc');
   const ans    = n('f-ans');
   const rer    = n('f-rer');
   const infR   = n('f-inf');
@@ -627,7 +651,7 @@ function recalc(){
     rcPort.push(Math.round(equityPort + retPort));   // cash excluded from retirement projection
     rcTgt.push(Math.round(portTarget));
     cashPort   = cashPort   * (1+r);
-    equityPort = equityPort * (1+r);
+    equityPort = equityPort * (1+r) + annBrok;
     retPort    = retPort    * (1+r) + ans;
   }
   const ppCash   = rcCashAcc[rcCashAcc.length-1]    || 0;
@@ -654,12 +678,22 @@ function recalc(){
   const ph2={yrs:0,equity:0,ret:0,rental:0,ss:0,pension:0,shortfall:0};
   const ph3={yrs:0,equity:0,ret:0,rental:0,ss:0,pension:0,shortfall:0};
 
-  // Draw from equity only (cash excluded from retirement projections)
-  const drawNonRet = (needed) => {
-    let dEquity=0;
-    if(pEquity >= needed){ dEquity = needed; pEquity -= needed; }
-    else { dEquity = pEquity; pEquity = 0; }
-    return {dEquity, shortfall: needed - dEquity};
+  // Draw from equity only — used for pre-59.5 phase
+  const drawEquityOnly = (needed) => {
+    const dEquity = Math.min(pEquity, needed);
+    pEquity -= dEquity;
+    return { dEquity, shortfall: needed - dEquity };
+  };
+
+  // Draw equally from taxable and retirement — used for post-59.5 phases
+  const drawEqual = (needed) => {
+    const half     = needed / 2;
+    const dEquity  = Math.min(pEquity, half);
+    pEquity       -= dEquity;
+    const retShare = needed - dEquity;           // remainder after equity portion
+    const dRet     = Math.min(pRet, retShare);
+    pRet          -= dRet;
+    return { dEquity, dRet, shortfall: needed - dEquity - dRet };
   };
 
   for(let y=0;y<=30;y++){
@@ -668,7 +702,7 @@ function recalc(){
     const ssIncome  = (ageNow >= ssAge) ? ss*12 : 0;
     const peIncome  = (ageNow >= peAge) ? pe*12 : 0;
     const desired   = rin * inflAdj;
-    let   needed    = Math.max(0, desired - ssIncome - peIncome - rentalAnn);
+    const needed    = Math.max(0, desired - ssIncome - peIncome - rentalAnn);
 
     pcAges.push(ageNow);
     pcEquity.push(Math.max(0, Math.round(pEquity)));
@@ -676,40 +710,34 @@ function recalc(){
     pcRetLine.push(Math.max(0, Math.round(pRet)));
     pcTotal.push(Math.max(0, Math.round(pEquity + pRet)));
 
-    const drawn = drawNonRet(needed);
-    let drawnRetNet=0, drawnPenalty=0;
-
     if(ageNow < 59.5){
-      // Phase 1 — equity first, then retirement with 10% IRS penalty
+      // Phase 1 — equity only; overflow hits retirement with 10% penalty
+      const drawn = drawEquityOnly(needed);
+      let drawnRetNet=0, drawnPenalty=0;
       if(drawn.shortfall > 0){
-        pRet -= drawn.shortfall * PENALTY;
-        drawnRetNet  = drawn.shortfall;
-        drawnPenalty = drawn.shortfall * 0.1;
+        const canDraw = Math.min(pRet / PENALTY, drawn.shortfall);
+        pRet        -= canDraw * PENALTY;
+        drawnRetNet  = canDraw;
+        drawnPenalty = canDraw * 0.1;
         if(!earlyPenaltyTriggered){ earlyPenaltyTriggered = true; }
         penaltyYears++;
+        if(canDraw < drawn.shortfall) ph1.shortfall += drawn.shortfall - canDraw;
       }
-      if(drawn.shortfall > 0 && pRet < drawn.shortfall * PENALTY) ph1.shortfall += drawn.shortfall;
       ph1.yrs++;  ph1.equity+=drawn.dEquity;  ph1.ret+=drawnRetNet;
       ph1.rental+=rentalAnn;  ph1.pension+=peIncome;  ph1.penalty+=drawnPenalty;
 
     } else if(ageNow < ssAge){
-      // Phase 2 — equity first, then retirement penalty-free, no SS
-      if(drawn.shortfall > 0){
-        const canDraw = Math.min(pRet, drawn.shortfall);
-        pRet -= canDraw; drawnRetNet = canDraw;
-        if(canDraw < drawn.shortfall) ph2.shortfall += drawn.shortfall - canDraw;
-      }
-      ph2.yrs++;  ph2.equity+=drawn.dEquity;  ph2.ret+=drawnRetNet;
+      // Phase 2 — equal split between taxable and retirement, penalty-free
+      const drawn = drawEqual(needed);
+      if(drawn.shortfall > 0) ph2.shortfall += drawn.shortfall;
+      ph2.yrs++;  ph2.equity+=drawn.dEquity;  ph2.ret+=drawn.dRet;
       ph2.rental+=rentalAnn;  ph2.pension+=peIncome;
 
     } else {
-      // Phase 3 — SS offsets need, then equity → retirement
-      if(drawn.shortfall > 0){
-        const canDraw = Math.min(pRet, drawn.shortfall);
-        pRet -= canDraw; drawnRetNet = canDraw;
-        if(canDraw < drawn.shortfall) ph3.shortfall += drawn.shortfall - canDraw;
-      }
-      ph3.yrs++;  ph3.equity+=drawn.dEquity;  ph3.ret+=drawnRetNet;
+      // Phase 3 — equal split between taxable and retirement; SS reduces need
+      const drawn = drawEqual(needed);
+      if(drawn.shortfall > 0) ph3.shortfall += drawn.shortfall;
+      ph3.yrs++;  ph3.equity+=drawn.dEquity;  ph3.ret+=drawn.dRet;
       ph3.rental+=rentalAnn;  ph3.ss+=ssIncome;  ph3.pension+=peIncome;
     }
 
@@ -1003,13 +1031,13 @@ function recalc(){
 const FIELD_IDS = ['f-name','f-age','f-retage','f-chk','f-sav','f-mkt',
   'f-brok','f-rsu','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro',
   'f-veh','f-oth','f-cl1','f-cl2','f-cc','f-sl','f-od',
-  'f-inc','f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-pe','f-peage','f-rental'];
+  'f-ans','f-rer','f-inf','f-rin','f-ss','f-ssage','f-pe','f-peage','f-rental'];
 const MAX_VERSIONS = 20;
 
 function currentNetWorth(){
   const reM = props.reduce((s,p)=>s+p.mort,0);
   const reV = props.reduce((s,p)=>s+p.val,0);
-  const ids = ['f-chk','f-sav','f-mkt','f-brok','f-rsu','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth'];
+  const ids = ['f-chk','f-sav','f-mkt','f-brok','f-cry','f-k1','f-rk','f-ir','f-ri','f-pe','f-ro','f-veh','f-oth'];
   const totA = ids.reduce((s,id)=>s+n(id),0)+reV;
   const totL = reM+['f-cl1','f-cl2','f-cc','f-sl','f-od'].reduce((s,id)=>s+n(id),0);
   return totA-totL;
@@ -1146,10 +1174,287 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   if(el) el.addEventListener('input', recalc);
 });
 
+// ── Crisis Simulator ─────────────────────────────────────────────────────────
+const CRISES = [
+  { key:'market_crash',  icon:'📉', name:'Market Crash',          desc:'Sudden drop in portfolio value' },
+  { key:'job_loss',      icon:'💼', name:'Job Loss',              desc:'Loss of employment for a period' },
+  { key:'medical',       icon:'🏥', name:'Medical Emergency',     desc:'Large unexpected medical bill' },
+  { key:'early_retire',  icon:'🏖️',  name:'Early Retirement',      desc:'Retiring sooner than planned' },
+  { key:'disability',    icon:'🩼', name:'Disability',            desc:'Permanent income reduction' },
+];
+
+const CRISIS_PARAMS = {
+  market_crash:  [{ id:'cr-crash-pct',   label:'Portfolio Loss',               type:'pct',   def:30,    min:5,  max:80 }],
+  job_loss:      [{ id:'cr-job-months',  label:'Duration (months)',             type:'num',   def:12,    min:1,  max:60 },
+                  { id:'cr-job-replace', label:'Savings Rate Maintained (%)',  type:'pct',   def:0,     min:0,  max:100, hint:'% of normal contributions kept up during job loss' },
+                  { id:'cr-job-burn',    label:'Monthly Savings Draw-Down',    type:'dollar', def:0,    min:0,  hint:'monthly amount pulled from savings to cover living expenses' }],
+  medical:       [{ id:'cr-med-cost',    label:'Out-of-Pocket Cost',           type:'dollar',def:50000, min:0 }],
+  early_retire:  [{ id:'cr-early-yrs',   label:'Retire This Many Years Earlier',type:'num',  def:5,     min:1,  max:20 }],
+  disability:    [{ id:'cr-dis-pct',     label:'Permanent Income Reduction',   type:'pct',   def:40,    min:1,  max:100 }],
+};
+
+let selectedCrisis = null;
+
+function buildCrisisUI(){
+  const list = $('crisis-scenario-list');
+  if(!list) return;
+  list.innerHTML = CRISES.map(c=>`
+    <button class="crisis-btn" data-key="${c.key}" onclick="selectCrisis('${c.key}')"
+      style="text-align:left;width:100%;background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:11px 14px;cursor:pointer;font-family:inherit;transition:all .15s">
+      <div style="font-size:13px;font-weight:700;color:#111827">${c.icon} ${c.name}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:2px">${c.desc}</div>
+    </button>`).join('');
+}
+
+function selectCrisis(key){
+  selectedCrisis = key;
+  document.querySelectorAll('.crisis-btn').forEach(b=>{
+    const active = b.dataset.key === key;
+    b.style.borderColor = active ? '#2563eb' : '#e5e7eb';
+    b.style.background  = active ? '#eff6ff'  : '#f9fafb';
+  });
+  const paramsEl = $('crisis-params');
+  const params   = CRISIS_PARAMS[key] || [];
+  paramsEl.style.display = params.length ? 'block' : 'none';
+  paramsEl.innerHTML = params.length
+    ? `<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Parameters</div>`
+      + params.map(p=>{
+          const pre  = p.type==='dollar' ? '<span class="sym sym-l">$</span>' : '';
+          const suf  = p.type==='pct'    ? '<span class="sym sym-r">%</span>' : '';
+          const cls  = p.type==='dollar' ? 'has-l' : p.type==='pct' ? 'has-r' : '';
+          const hint = p.hint ? `<div style="font-size:11px;color:#9ca3af;margin-top:-8px;margin-bottom:8px">${p.hint}</div>` : '';
+          return `<label class="field-label">${p.label}</label>
+            <div class="field-wrap">${pre}<input type="number" class="${cls}" id="${p.id}" value="${p.def}" min="${p.min||0}" ${p.max?`max="${p.max}"`:''}/>  ${suf}</div>${hint}`;
+        }).join('')
+    : '';
+  params.forEach(p=>{ const el=$(p.id); if(el) el.addEventListener('input', runCrisis); });
+  runCrisis();
+}
+
+function runCrisis(){
+  if(!selectedCrisis) return;
+  const result = computeCrisisImpact(selectedCrisis);
+  renderCrisisOutput(selectedCrisis, result);
+}
+
+function computeCrisisImpact(key){
+  const age     = n('f-age');
+  const retAge  = n('f-retage');
+  const cash    = n('f-chk')+n('f-sav')+n('f-mkt');
+  const inv     = n('f-brok')+n('f-cry');
+  const annBrok = n('f-rsu');
+  const ret     = n('f-k1')+n('f-rk')+n('f-ir')+n('f-ri')+n('f-ro');
+  const ans     = n('f-ans');
+  const r       = n('f-rer')/100;
+  const rin     = n('f-rin');
+  const ss      = n('f-ss');
+  const ssAge   = n('f-ssage')||67;
+  const pe      = n('f-pe')||0;
+  const rentalAnn = (n('f-rental')||0)*12;
+  const yrs     = Math.max(0, retAge-age);
+  const incomeFromPortfolio = Math.max(0, rin - ss*12 - pe*12 - rentalAnn);
+  const portTarget = incomeFromPortfolio / 0.04;
+
+  function accum(ei, ri, brok, retC, numYrs){
+    let ep=ei, rp=ri;
+    for(let y=0;y<numYrs;y++){ ep=ep*(1+r)+brok; rp=rp*(1+r)+retC; }
+    return Math.max(0,ep)+Math.max(0,rp);
+  }
+
+  const pp_base = accum(inv, ret, annBrok, ans, yrs);
+
+  let cInv=inv, cRet=ret, cBrok=annBrok, cAns=ans, cYrs=yrs, details={};
+
+  if(key==='market_crash'){
+    const pct = n('cr-crash-pct')/100;
+    cInv = inv*(1-pct); cRet = ret*(1-pct);
+    details = { pct, lossAmt:(inv+ret)*pct };
+
+  } else if(key==='job_loss'){
+    const months      = n('cr-job-months');
+    const savingsRate = n('cr-job-replace')/100;
+    const burnMo      = n('cr-job-burn');
+    const totalBurn   = burnMo * months;
+    // Cash buffers the burn; remainder hits brokerage (which IS part of retirement model)
+    const fromInv     = Math.max(0, totalBurn - cash);
+    const fromRet     = Math.max(0, fromInv - inv);
+    cInv = Math.max(0, inv - fromInv);
+    cRet = Math.max(0, ret - fromRet);
+    const fracLost = Math.min(1, months/12/Math.max(1,yrs));
+    cBrok = annBrok * (1 - (1-savingsRate)*fracLost);
+    cAns  = ans     * (1 - (1-savingsRate)*fracLost);
+    const lostContrib = (ans+annBrok) * (1-savingsRate) * (months/12);
+    details = { months, savingsRate, burnMo, totalBurn, fromInv, fromRet, lostContrib };
+
+  } else if(key==='medical'){
+    const cost     = n('cr-med-cost');
+    const fromCash = Math.min(cash, cost);
+    const fromInv  = Math.min(inv, Math.max(0, cost - fromCash));
+    const fromRet  = Math.max(0, cost - fromCash - fromInv);
+    cInv = Math.max(0, inv - fromInv);
+    cRet = Math.max(0, ret - fromRet);
+    details = { cost, fromCash, fromInv, fromRet };
+
+  } else if(key==='early_retire'){
+    const yrsEarlier = n('cr-early-yrs');
+    cYrs = Math.max(0, yrs-yrsEarlier);
+    details = { yrsEarlier, newRetAge: retAge-yrsEarlier };
+
+  } else if(key==='disability'){
+    const redPct = n('cr-dis-pct')/100;
+    cAns  = ans*(1-redPct); cBrok = annBrok*(1-redPct);
+    details = { redPct, lostAns: ans*redPct };
+  }
+
+  const pp_crisis = accum(cInv, cRet, cBrok, cAns, cYrs);
+  const diff      = pp_base - pp_crisis;
+  const impactPct = pp_base>0 ? diff/pp_base*100 : 0;
+  const monthlyIncomeDiff = diff*0.04/12;
+
+  let recoveryYrs=null;
+  if(diff>0 && ans>0){ let fv=0,ry=0; while(fv<diff&&ry<60){ry++;fv=fv*(1+r)+ans;} recoveryYrs=ry<60?ry:null; }
+
+  let riskLevel, riskColor, riskBg;
+  if(impactPct<10)      { riskLevel='Low';      riskColor='#166534'; riskBg='#dcfce7'; }
+  else if(impactPct<25) { riskLevel='Moderate'; riskColor='#854d0e'; riskBg='#fef9c3'; }
+  else if(impactPct<45) { riskLevel='Serious';  riskColor='#c2410c'; riskBg='#ffedd5'; }
+  else                  { riskLevel='Critical'; riskColor='#991b1b'; riskBg='#fee2e2'; }
+
+  return { pp_base, pp_crisis, diff, monthlyIncomeDiff, impactPct, portTarget,
+           recoveryYrs, riskLevel, riskColor, riskBg, details,
+           yrs, age, retAge, cash, inv, ret, ans,
+           rin, ss, ssAge, pe, rentalAnn, incomeFromPortfolio };
+}
+
+function renderCrisisOutput(key, r){
+  const crisis = CRISES.find(c=>c.key===key);
+  const el     = $('crisis-output');
+  if(!el) return;
+
+  const summaries = {
+    market_crash:  `A sudden ${(r.details.pct*100).toFixed(0)}% market drop wipes ${fmt(r.details.lossAmt)} from your portfolio immediately. Growth then resumes at the expected rate.`,
+    job_loss:      `You lose your job for ${r.details.months} months, maintaining ${(r.details.savingsRate*100).toFixed(0)}% of your normal savings rate.`
+      + (r.details.burnMo>0 ? ` You draw ${fmt(r.details.burnMo)}/mo (${fmt(r.details.totalBurn)} total) — ${r.details.fromInv>0?`${fmt(r.details.fromInv)} from brokerage${r.details.fromRet>0?`, then ${fmt(r.details.fromRet)} from retirement accounts`:''}`:' fully covered by cash'}.` : '')
+      + ` Lost contributions: ${fmt(r.details.lostContrib)}.`,
+    medical:       `An unexpected medical bill of ${fmt(r.details.cost)} hits your finances. `
+      + (r.details.fromCash>0?`Cash covers ${fmt(r.details.fromCash)}. `:'')
+      + (r.details.fromInv>0?`${fmt(r.details.fromInv)} comes from brokerage accounts. `:'')
+      + (r.details.fromRet>0?`${fmt(r.details.fromRet)} is pulled from retirement accounts.`:'')
+      + (r.details.fromCash>=r.details.cost?'Your cash fully covers the cost.':''),
+    early_retire:  `You retire ${r.details.yrsEarlier} years early (at age ${r.details.newRetAge}), losing ${r.details.yrsEarlier} years of compounding growth and contributions.`,
+    disability:    `A permanent ${(r.details.redPct*100).toFixed(0)}% income reduction means ${fmt(r.details.lostAns)}/yr less saved for retirement going forward.`,
+  };
+
+  const riskDescs = {
+    Low:      `This scenario reduces your projected retirement savings by ${r.impactPct.toFixed(0)}% — significant but manageable within your current plan.`,
+    Moderate: `This scenario reduces your projected retirement savings by ${r.impactPct.toFixed(0)}%, requiring adjustments to your timeline or savings rate.`,
+    Serious:  `This scenario reduces your projected retirement savings by ${r.impactPct.toFixed(0)}%. Without action, it materially threatens your retirement security.`,
+    Critical: `This scenario reduces your projected retirement savings by ${r.impactPct.toFixed(0)}%. This is a retirement-threatening event that requires immediate planning.`,
+  };
+
+  const actions = {
+    market_crash: [
+      `Stay invested — don't sell into the crash. Historical recoveries average 3–5 years. Selling would lock in losses on your ${fmt(r.inv+r.ret)} portfolio permanently.`,
+      `Rebalance if you hold cash or bonds: consider shifting some of your ${fmt(r.cash)} cash into equities to buy at depressed prices.`,
+      `Boost contributions temporarily if possible — even an extra $500/mo during a recovery accelerates the rebuild significantly.`,
+    ],
+    job_loss: [
+      `Protect your cash first — with ${fmt(r.cash)} in savings, you have roughly ${r.cash>0&&r.details.burnMo>0?(r.cash/r.details.burnMo).toFixed(1):'—'} months of runway at ${fmt(r.details.burnMo)}/mo before touching brokerage accounts.`,
+      `Maintain at least ${(r.details.savingsRate*100).toFixed(0)}% of your normal contributions if possible — even reduced contributions of ${fmt((r.ans+n('f-rsu'))*r.details.savingsRate/12)}/mo keep compounding working for you.`,
+      `This is likely a low-income year — consider a Roth IRA conversion on a portion of your traditional IRA balance (${fmt(n('f-ir')+n('f-ri'))}) at a lower tax rate.`,
+    ],
+    medical: [
+      `Negotiate the bill before paying — hospitals often reduce balances 20–40% for direct payment or financial hardship applications.`,
+      `Replenish your emergency fund before resuming investment contributions. Target 3–6 months of expenses (${fmt(r.rin/4)}–${fmt(r.rin/2)}).`,
+      `Increase your annual brokerage contribution (currently ${fmt(n('f-rsu'))}) to rebuild the ${fmt((r.details.fromInv||0)+(r.details.fromRet||0))} drawn from investment${r.details.fromRet>0?' and retirement':''} accounts.`,
+    ],
+    early_retire: [
+      `Check the 59½ rule: retiring at ${r.details.newRetAge} means ${59.5>r.details.newRetAge?`you'd face a ${(59.5-r.details.newRetAge).toFixed(1)}-year lock on retirement accounts — ensure your taxable brokerage (${fmt(r.inv)}) bridges the gap`:'all accounts are penalty-free from day one'}.`,
+      `Stress-test your withdrawal rate — ${r.details.yrsEarlier} extra years of withdrawals may require dropping from 4% to 3.5%, meaning you'd need ${fmtS(r.incomeFromPortfolio/0.035)} vs. your target ${fmtS(r.portTarget)}.`,
+      `Plan for pre-Medicare healthcare costs — coverage before age 65 can cost $15,000–25,000/yr and should be factored into your ${fmt(r.rin)}/yr income goal.`,
+    ],
+    disability: [
+      `Verify your disability insurance — most policies replace 60% of income. If you lack coverage, get a quote now before a claim arises.`,
+      `A ${(r.details.redPct*100).toFixed(0)}% income reduction means ${fmt(r.details.lostAns)}/yr less in retirement contributions. Prioritize capturing any employer 401k match before other savings.`,
+      `Consider adjusting your retirement age or income target — ${fmtS(r.pp_crisis)} at retirement supports ${fmt(r.pp_crisis*0.04)}/yr vs. your current goal of ${fmt(r.rin)}/yr.`,
+    ],
+  };
+
+  const silverLinings = [];
+  if(r.age<45)             silverLinings.push(`You're ${r.age} — time is your biggest asset. At ${n('f-rer')}% returns, ${r.yrs} years of compounding can absorb most of this gap.`);
+  if(r.cash > r.rin*0.5)  silverLinings.push(`Your cash reserve of ${fmt(r.cash)} provides ${(r.cash/(r.rin/12)).toFixed(1)} months of living expenses — a meaningful cushion.`);
+  if(n('f-rental')>0)     silverLinings.push(`Your rental income (${fmt(n('f-rental')*12)}/yr) is unaffected by this scenario and reduces portfolio dependency in retirement.`);
+  if(r.pe>0)               silverLinings.push(`Your pension (${fmt(r.pe*12)}/yr) is guaranteed and doesn't depend on portfolio performance.`);
+  if(r.impactPct<20 && r.recoveryYrs && r.recoveryYrs<=r.yrs) silverLinings.push(`The gap is fully recoverable in ~${r.recoveryYrs} years at your current savings rate — well before retirement.`);
+
+  const barColor = r.riskLevel==='Low'?'#22c55e':r.riskLevel==='Moderate'?'#f59e0b':r.riskLevel==='Serious'?'#f97316':'#ef4444';
+
+  const recoveryText = r.diff<=0
+    ? `No recovery needed — this scenario doesn't reduce your projected savings.`
+    : r.recoveryYrs===null
+      ? `The gap of ${fmtS(r.diff)} would take more than 50 years to recover at your current savings rate of ${fmt(r.ans)}/yr. Significant plan adjustments are needed.`
+      : r.recoveryYrs<=r.yrs
+        ? `At your current savings rate of ${fmt(r.ans)}/yr, the ${fmtS(r.diff)} gap could be recovered in approximately <strong>${r.recoveryYrs} year${r.recoveryYrs!==1?'s':''}</strong> — well before retirement at age ${r.retAge}.`
+        : `The ${fmtS(r.diff)} gap would take approximately <strong>${r.recoveryYrs} years</strong> to recover at ${fmt(r.ans)}/yr, but you only have ${r.yrs} years until retirement. Consider increasing savings or adjusting your plan.`;
+
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:16px">
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:17px;font-weight:700;color:#111827">${crisis.icon} ${crisis.name} — Impact Analysis</div>
+        <div style="background:${r.riskBg};color:${r.riskColor};font-weight:700;font-size:12px;padding:5px 13px;border-radius:999px;border:1px solid ${r.riskColor}40">${r.riskLevel} Risk</div>
+      </div>
+      <p style="font-size:13px;color:#4b5563;line-height:1.6;margin:0">${summaries[key]}</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Baseline vs. Crisis Projection</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="tile tile-blue"><div class="t-lbl">Without Crisis</div><div class="t-val">${fmtS(r.pp_base)}</div><div class="t-sub">at retirement</div></div>
+        <div class="tile tile-red"><div class="t-lbl">With This Crisis</div><div class="t-val">${fmtS(r.pp_crisis)}</div><div class="t-sub">at retirement</div></div>
+        <div class="tile tile-orange"><div class="t-lbl">Difference</div><div class="t-val">−${fmtS(Math.abs(r.diff))}</div><div class="t-sub">≈ ${fmt(Math.abs(r.monthlyIncomeDiff))}/mo less income</div></div>
+      </div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:4px">Portfolio impact: ${r.impactPct.toFixed(1)}% reduction</div>
+      <div class="prog-bg"><div class="prog-fill" style="width:${Math.min(100,r.impactPct)}%;background:${barColor}"></div></div>
+      <div style="font-size:13px;color:#4b5563;margin-top:10px">
+        ${r.portTarget>0?`Your target is ${fmtS(r.portTarget)} (4% rule). Without the crisis you ${r.pp_base>=r.portTarget?'✅ meet':'⚠️ fall short of'} this. With it, you ${r.pp_crisis>=r.portTarget?'✅ still meet':'❌ no longer meet'} it.`:''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⏱️ Recovery Timeline</div>
+      <p style="font-size:13px;color:#4b5563;line-height:1.6;margin:0">${recoveryText}</p>
+    </div>
+
+    <div class="card" style="background:${r.riskBg};border:1px solid ${r.riskColor}50">
+      <div class="card-title" style="color:${r.riskColor}">⚠️ Risk Assessment: ${r.riskLevel}</div>
+      <p style="font-size:13px;color:${r.riskColor};line-height:1.6;margin:0">${riskDescs[r.riskLevel]}</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ Action Steps</div>
+      ${(actions[key]||[]).map((s,i)=>`
+        <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+          <div style="width:22px;height:22px;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">${i+1}</div>
+          <div style="font-size:13px;color:#374151;line-height:1.55">${s}</div>
+        </div>`).join('')}
+    </div>
+
+    ${silverLinings.length?`
+    <div class="card" style="background:#f0fdf4;border:1px solid #bbf7d0">
+      <div class="card-title" style="color:#166534">🌟 Silver Linings</div>
+      ${silverLinings.map(s=>`<div style="font-size:13px;color:#166534;padding:4px 0;display:flex;gap:8px"><span style="flex-shrink:0">•</span><span>${s}</span></div>`).join('')}
+    </div>`:''}
+
+    <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0">This analysis uses simplified financial models. Consult a financial advisor before making major decisions.</p>
+  </div>`;
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
-loadData();   // restore any previously saved data
-buildProps(); // build dynamic sections (uses loaded state)
+loadData();
+buildProps();
 buildKids();
+buildCrisisUI();
 recalc();
 </script>
 </body>
