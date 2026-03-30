@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Financial Planning Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef2ff;color:#111827;font-size:14px;min-height:100vh}
@@ -51,6 +52,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 .tile-orange{background:#fff7ed;color:#9a3412}
 .tile-purple{background:#faf5ff;color:#5b21b6}
 .tile-yellow{background:#fefce8;color:#854d0e}
+.tile-teal{background:#f0fdfa;color:#0f766e}
+.ret-dollar-btn{font-size:12px;padding:5px 14px;border-radius:99px;border:1px solid #d1d5db;background:white;cursor:pointer;color:#6b7280;line-height:1.5;font-family:inherit;font-weight:500;white-space:nowrap;transition:all 0.15s}
+.ret-dollar-btn:hover{border-color:#9ca3af;color:#374151;background:#f9fafb}
+.ret-dollar-btn.real{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
 /* Form */
 .field-label{display:block;font-size:12px;font-weight:500;color:#4b5563;margin-bottom:4px}
 .field-wrap{position:relative;margin-bottom:12px}
@@ -126,6 +131,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
       <div class="hdr-btns">
         <button class="save-btn" id="save-btn" onclick="saveData()">💾 Save</button>
         <button class="save-btn" id="hist-btn" onclick="toggleHistory()">🕐 History</button>
+        <button class="save-btn" onclick="exportToExcel()" style="background:rgba(255,255,255,0.15)">📊 Export Excel</button>
       </div>
     </div>
   </div>
@@ -284,12 +290,22 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
 
   <!-- ── TAB 2: RETIREMENT ─────────────────────────────────────────────── -->
   <div class="tab-panel" id="panel-2">
+    <!-- Header row: title area + single toggle button -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button id="ret-dollar-btn" class="ret-dollar-btn" onclick="toggleRetDollars()">Put into Today's $</button>
+    </div>
     <!-- Summary tiles -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
       <div class="tile tile-blue"><div class="t-lbl">Years to Retirement</div><div class="t-val" id="ret-yrs">0</div></div>
-      <div class="tile tile-purple"><div class="t-lbl">Equity Portfolio</div><div class="t-val" id="ret-nonret">$0</div><div class="t-sub">at retirement (excl. cash)</div></div>
-      <div class="tile tile-orange"><div class="t-lbl">Retirement Accounts</div><div class="t-val" id="ret-retacc">$0</div><div class="t-sub">at retirement</div></div>
-      <div class="tile tile-yellow"><div class="t-lbl">Target (4% rule)</div><div class="t-val" id="ret-tgt">$0</div></div>
+      <div class="tile tile-orange">
+        <div class="t-lbl">Equity Portfolio</div><div class="t-val" id="ret-nonret">$0</div><div class="t-sub">at retirement (excl. cash)</div>
+      </div>
+      <div class="tile tile-purple">
+        <div class="t-lbl">Retirement Accounts</div><div class="t-val" id="ret-retacc">$0</div><div class="t-sub">at retirement</div>
+      </div>
+      <div class="tile tile-teal">
+        <div class="t-lbl">Target (4% rule)</div><div class="t-val" id="ret-tgt">$0</div>
+      </div>
       <div class="tile tile-green" id="ret-gap-tile">
         <div class="t-lbl" id="ret-gap-lbl">Projected Surplus</div>
         <div class="t-val" id="ret-gap-val">$0</div>
@@ -302,8 +318,14 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background:
     </div>
     <!-- Charts -->
     <div class="grid2">
-      <div class="card"><div class="card-title">Portfolio Growth to Retirement</div><canvas id="chart-line1" height="240"></canvas></div>
-      <div class="card"><div class="card-title">Portfolio by Account Type in Retirement (30 yrs)</div><canvas id="chart-line2" height="240"></canvas></div>
+      <div class="card">
+        <div class="card-title">Portfolio Growth to Retirement</div>
+        <canvas id="chart-line1" height="240"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Portfolio by Account Type in Retirement (to Age 85)</div>
+        <canvas id="chart-line2" height="240"></canvas>
+      </div>
     </div>
     <!-- Phase analysis -->
     <div class="card gap">
@@ -568,6 +590,74 @@ function addKid(){
 
 // ── Charts ───────────────────────────────────────────────────────────────────
 let chartPie=null, chartBar=null, chartLine1=null, chartLine2=null;
+let _xData = {}; // populated by recalc() for Excel export
+let retRealDollars = false;
+let _retCache = {};
+
+function applyRetDisplay(){
+  const c = _retCache;
+  if(!c.rcAges) return;
+  const df = (retRealDollars && c.yrs > 0)
+    ? v => Math.round(v / Math.pow(1 + c.i2, c.yrs))
+    : v => v;
+  $('ret-nonret').textContent  = fmtS(df(c.ppEquity));
+  $('ret-retacc').textContent  = fmtS(df(c.ppRet));
+  $('ret-tgt').textContent     = fmtS(df(c.portTarget));
+  $('ret-gap-val').textContent = fmtS(Math.abs(df(c.gap)));
+  $('ret-gap-lbl').textContent = c.gap>=0?'Projected Surplus':'Projected Shortfall';
+  $('ret-gap-sub').textContent = c.gap>=0?"You're on track 🎉":"Consider saving more ⚠️";
+  const gapTile = $('ret-gap-tile');
+  if(gapTile) gapTile.className = 'tile '+(c.gap>=0?'tile-green':'tile-red');
+  // update toggle button
+  const btn = $('ret-dollar-btn');
+  if(btn){
+    btn.textContent = retRealDollars ? "Put into Future $" : "Put into Today's $";
+    btn.classList.toggle('real', retRealDollars);
+  }
+}
+
+function buildRetCharts(){
+  const c = _retCache;
+  if(!c.rcAges) return;
+  const dfArr1 = arr => (retRealDollars && c.yrs > 0)
+    ? arr.map((v,i) => Math.round(v / Math.pow(1 + c.i2, c.rcAges[i] - c.age)))
+    : arr;
+  const dfArr2 = arr => (retRealDollars && c.yrs > 0)
+    ? arr.map((v,i) => Math.round(v / Math.pow(1 + c.i2, c.pcAges[i] - c.age)))
+    : arr;
+  if(chartLine1){ chartLine1.destroy(); }
+  const l1ctx = $('chart-line1')?.getContext('2d');
+  if(l1ctx) chartLine1 = new Chart(l1ctx,{
+    type:'line',
+    data:{labels:c.rcAges,datasets:[
+      {label:'Invested Portfolio',  data:dfArr1(c.rcPort),      borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Cash & Equivalents', data:dfArr1(c.rcCashAcc),   borderColor:'#0891b2',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[3,2]},
+      {label:'Equity Portfolio',   data:dfArr1(c.rcEquityAcc), borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Retirement Accounts',data:dfArr1(c.rcRetAcc),    borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Target',             data:dfArr1(c.rcTgt),       borderColor:'#16a34a',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0,borderDash:[6,3]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
+      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
+  });
+  if(chartLine2){ chartLine2.destroy(); }
+  const l2ctx = $('chart-line2')?.getContext('2d');
+  if(l2ctx) chartLine2 = new Chart(l2ctx,{
+    type:'line',
+    data:{labels:c.pcAges,datasets:[
+      {label:'Total Portfolio',    data:dfArr2(c.pcTotal),   borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
+      {label:'Equity Portfolio',   data:dfArr2(c.pcEquity),  borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
+      {label:'Retirement Accounts',data:dfArr2(c.pcRetLine), borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
+      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
+  });
+}
+
+function toggleRetDollars(){
+  retRealDollars = !retRealDollars;
+  applyRetDisplay();
+  buildRetCharts();
+}
 
 function makeOrUpdate(inst, canvasId, cfg){
   if(inst){ inst.data = cfg.data; inst.options = cfg.options; inst.update(); return inst; }
@@ -665,7 +755,7 @@ function recalc(){
   if(nwEl){ nwEl.textContent = fmt(nw); nwEl.style.color = nw>=0?'white':'#fca5a5'; }
   $('hdr-pp').textContent   = fmtS(pp);
 
-  // ── Post-retirement phased drawdown (30 yrs) ──
+  // ── Post-retirement phased drawdown (to age 85) ──
   const PENALTY = 1.10;  // 10% early withdrawal penalty → need 10% more gross
   let pEquity = ppEquity;
   let pRet    = ppRet;
@@ -696,7 +786,7 @@ function recalc(){
     return { dEquity, dRet, shortfall: needed - dEquity - dRet };
   };
 
-  for(let y=0;y<=30;y++){
+  for(let y=0;y<=(85-retAge);y++){
     const ageNow    = retAge + y;
     const inflAdj   = Math.pow(1+i2, y);
     const ssIncome  = (ageNow >= ssAge) ? ss*12 : 0;
@@ -744,6 +834,11 @@ function recalc(){
     pEquity = Math.max(0, pEquity) * (1+r);
     pRet    = Math.max(0, pRet)    * (1+r);
   }
+
+  // Store data for dollar-mode toggle
+  _retCache = { age, i2, yrs, ppEquity, ppRet, portTarget, gap,
+    rcAges, rcPort, rcCashAcc, rcEquityAcc, rcRetAcc, rcTgt,
+    pcAges, pcTotal, pcEquity, pcRetLine };
 
   // ── College projections ──
   const collResults = kids.map(k=>{
@@ -840,15 +935,8 @@ function recalc(){
   }
 
   // ── Update Retirement tab ──
-  $('ret-yrs').textContent       = yrs;
-  $('ret-nonret').textContent    = fmtS(ppEquity);
-  $('ret-retacc').textContent    = fmtS(ppRet);
-  $('ret-tgt').textContent       = fmtS(portTarget);
-  $('ret-gap-val').textContent   = fmtS(Math.abs(gap));
-  $('ret-gap-lbl').textContent   = gap>=0?'Projected Surplus':'Projected Shortfall';
-  $('ret-gap-sub').textContent   = gap>=0?"You're on track 🎉":"Consider saving more ⚠️";
-  const gapTile = $('ret-gap-tile');
-  if(gapTile) gapTile.className = 'tile '+(gap>=0?'tile-green':'tile-red');
+  $('ret-yrs').textContent = yrs;
+  applyRetDisplay();
 
   // Early withdrawal warning
   const warnEl = $('ret-penalty-warn');
@@ -963,35 +1051,7 @@ function recalc(){
   }
 
 
-  // Line chart 1 — growth
-  if(chartLine1){ chartLine1.destroy(); }
-  const l1ctx = $('chart-line1')?.getContext('2d');
-  if(l1ctx) chartLine1 = new Chart(l1ctx,{
-    type:'line',
-    data:{labels:rcAges,datasets:[
-      {label:'Invested Portfolio',  data:rcPort,       borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
-      {label:'Cash & Equivalents', data:rcCashAcc,    borderColor:'#0891b2',backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[3,2]},
-      {label:'Equity Portfolio',   data:rcEquityAcc,  borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
-      {label:'Retirement Accounts',data:rcRetAcc,     borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
-      {label:'Target',             data:rcTgt,        borderColor:'#16a34a',backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0,borderDash:[6,3]}
-    ]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
-      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
-  });
-
-  // Line chart 2 — drawdown by account type
-  if(chartLine2){ chartLine2.destroy(); }
-  const l2ctx = $('chart-line2')?.getContext('2d');
-  if(l2ctx) chartLine2 = new Chart(l2ctx,{
-    type:'line',
-    data:{labels:pcAges,datasets:[
-      {label:'Total Portfolio',    data:pcTotal,   borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',fill:true,borderWidth:2.5,pointRadius:0,tension:0.3},
-      {label:'Equity Portfolio',   data:pcEquity,  borderColor:'#f97316',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]},
-      {label:'Retirement Accounts',data:pcRetLine, borderColor:'#7c3aed',backgroundColor:'transparent',borderWidth:1.8,pointRadius:0,tension:0.3,borderDash:[4,2]}
-    ]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:12}}}},
-      scales:{y:{ticks:{callback:v=>fmtS(v),font:{size:11}},grid:{color:'#f0f0f0'}},x:{ticks:{maxTicksLimit:8,font:{size:11}},grid:{display:false}}}}
-  });
+  buildRetCharts();
 
   // ── Update College tab ──
   const hasColl = collResults.length>0;
@@ -1025,6 +1085,26 @@ function recalc(){
         ${k.gap<0?`<p class="gap-note">Additional monthly savings needed: ~${fmt(Math.abs(k.gap)/(k.ytc*12))}/mo</p>`:''}
       </div>
     </div>`).join('');
+
+  // ── Store data for Excel export ──
+  _xData = {
+    inputs: { name:$('f-name')?.value||'My Household', age, retAge, ans, annBrok,
+              rer:n('f-rer'), inf:n('f-inf'), rin, ss, ssAge, pe, peAge,
+              rentalMo:n('f-rental'), rentalAnn },
+    netWorth: {
+      chk:n('f-chk'), sav:n('f-sav'), mkt:n('f-mkt'),
+      brok:n('f-brok'), cry:n('f-cry'),
+      k1:n('f-k1'), rk:n('f-rk'), ir:n('f-ir'), ri:n('f-ri'), ro:n('f-ro'),
+      veh:n('f-veh'), oth:n('f-oth'),
+      cl1:n('f-cl1'), cl2:n('f-cl2'), cc:n('f-cc'), sl:n('f-sl'), od:n('f-od'),
+      props: JSON.parse(JSON.stringify(props))
+    },
+    accumulation: { ages:rcAges, cash:rcCashAcc, equity:rcEquityAcc, retirement:rcRetAcc, total:rcPort, target:rcTgt },
+    drawdown:     { ages:pcAges, equity:pcEquity, retirement:pcRetLine, total:pcTotal },
+    phases:       { ph1:JSON.parse(JSON.stringify(ph1)), ph2:JSON.parse(JSON.stringify(ph2)), ph3:JSON.parse(JSON.stringify(ph3)) },
+    retirement:   { ppEquity, ppRet, pp, portTarget },
+    college:      collResults.map(k=>({...k}))
+  };
 }
 
 // ── Save / Load / History ─────────────────────────────────────────────────────
@@ -1448,6 +1528,340 @@ function renderCrisisOutput(key, r){
 
     <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0">This analysis uses simplified financial models. Consult a financial advisor before making major decisions.</p>
   </div>`;
+}
+
+// ── Excel Export ─────────────────────────────────────────────────────────────
+function exportToExcel(){
+  if(!window.XLSX){ alert('Excel library not loaded yet. Please wait a moment and try again.'); return; }
+  const wb  = XLSX.utils.book_new();
+  const cur = new Date().getFullYear();
+  const d   = _xData;
+
+  // ── Cell builder helpers ──────────────────────────────────────────────────
+  function toCol(c){ let s=''; c++; while(c>0){c--;s=String.fromCharCode(65+c%26)+s;c=Math.floor(c/26);} return s; }
+  const addr = (r,c) => toCol(c)+(r+1);   // 0-indexed row,col → "B5"
+  const $F = '"$"#,##0';                   // dollar format (no cents)
+  // xlsx-js-style: numFmt must live inside cell.s to be written reliably.
+  // YELLOW = plain (ages, %, years); YELLOW_$ = dollar amounts.
+  const _YFill = { patternType:'solid', fgColor:{ rgb:'FFFDE7' } };
+  const YELLOW  = { numFmt:'General', fill:_YFill };   // no dollar format
+  const YELLOW$ = { numFmt:$F,        fill:_YFill };   // dollar format
+
+  function makeWS(){
+    const ws={}, track={maxR:0,maxC:0}, colW=[];
+    const touch=(r,c)=>{ if(r>track.maxR)track.maxR=r; if(c>track.maxC)track.maxC=c; };
+    // Track max content width per column for autosizing
+    const trackW=(c,str)=>{ const w=str?str.length:0; if(!colW[c]||w>colW[c]) colW[c]=w; };
+    // sv: value cell.
+    //   fmt  = Excel format string applied via cell.z (for non-styled formula cells)
+    //   sty  = xlsx-js-style object; if provided, numFmt inside sty takes precedence
+    const sv=(r,c,v,fmt,sty)=>{ touch(r,c); const a=addr(r,c);
+      if(typeof v==='number'){
+        ws[a]={t:'n',v};
+        if(sty) ws[a].s=sty;                // style (includes numFmt for styled cells)
+        else if(fmt) ws[a].z=fmt;           // format-only for unstyled cells
+        trackW(c, (fmt||sty?.numFmt||'').includes('$')
+          ? '$'+Math.abs(Math.round(v)).toLocaleString() : String(v));
+      } else {
+        const s=v==null?'':String(v);
+        ws[a]={t:'s',v:s}; if(sty) ws[a].s=sty;
+        trackW(c,s);
+      }
+    };
+    // sf: formula cell.
+    const sf=(r,c,formula,hint=0,fmt,sty)=>{ touch(r,c); const a=addr(r,c);
+      ws[a]={t:'n',f:formula,v:hint};
+      if(sty) ws[a].s=sty;
+      else if(fmt) ws[a].z=fmt;
+      trackW(c, (fmt||sty?.numFmt||'').includes('$')
+        ? '$'+Math.abs(Math.round(hint)).toLocaleString() : String(hint));
+    };
+    // seal: finalise ref and apply column widths (col A fixed; B+ autosized)
+    const seal=()=>{
+      ws['!ref']=addr(0,0)+':'+addr(track.maxR,track.maxC);
+      ws['!cols']=Array.from({length:track.maxC+1},(_,i)=>
+        i===0 ? {wch:38} : {wch:Math.max((colW[i]||8)+3,12)});
+      return ws;
+    };
+    return {sv,sf,seal,ws};
+  }
+
+  // ── Sheet 1: Net Worth ────────────────────────────────────────────────────
+  {
+    const {sv,sf,seal} = makeWS();
+    const nw = d.netWorth || {};
+    let r = 0;
+    sv(r,0,'NET WORTH SUMMARY'); r++;
+    sv(r,0,'Generated'); sv(r,1,new Date().toLocaleDateString()); r++;
+    r++;
+    sv(r,0,'ASSETS'); r++;
+    // Cash
+    sv(r,0,'Cash & Equivalents'); r++;
+    const chkR=r; sv(r,0,'  Checking');    sv(r,1,nw.chk||0,null,YELLOW$); r++;
+    const savR=r; sv(r,0,'  Savings');      sv(r,1,nw.sav||0,null,YELLOW$); r++;
+    const mktR=r; sv(r,0,'  Money Market'); sv(r,1,nw.mkt||0,null,YELLOW$); r++;
+    const cashSubR=r; sv(r,0,'  Total Cash');
+    sf(r,1,`=B${chkR+1}+B${savR+1}+B${mktR+1}`,(nw.chk||0)+(nw.sav||0)+(nw.mkt||0),$F); r++;
+    r++;
+    // Investments
+    sv(r,0,'Investments'); r++;
+    const brokR=r; sv(r,0,'  Brokerage/Taxable'); sv(r,1,nw.brok||0,null,YELLOW$); r++;
+    const cryR=r;  sv(r,0,'  Crypto');             sv(r,1,nw.cry||0,null,YELLOW$); r++;
+    const invSubR=r; sv(r,0,'  Total Investments');
+    sf(r,1,`=B${brokR+1}+B${cryR+1}`,(nw.brok||0)+(nw.cry||0),$F); r++;
+    r++;
+    // Retirement accounts
+    sv(r,0,'Retirement Accounts'); r++;
+    const k1R=r; sv(r,0,'  401(k)');      sv(r,1,nw.k1||0,null,YELLOW$); r++;
+    const rkR=r; sv(r,0,'  Roth 401(k)'); sv(r,1,nw.rk||0,null,YELLOW$); r++;
+    const irR=r; sv(r,0,'  IRA');         sv(r,1,nw.ir||0,null,YELLOW$); r++;
+    const riR=r; sv(r,0,'  Roth IRA');    sv(r,1,nw.ri||0,null,YELLOW$); r++;
+    const roR=r; sv(r,0,'  Other');       sv(r,1,nw.ro||0,null,YELLOW$); r++;
+    const retAccSubR=r; sv(r,0,'  Total Retirement');
+    sf(r,1,`=B${k1R+1}+B${rkR+1}+B${irR+1}+B${riR+1}+B${roR+1}`,
+       (nw.k1||0)+(nw.rk||0)+(nw.ir||0)+(nw.ri||0)+(nw.ro||0),$F); r++;
+    r++;
+    // Real estate
+    const props=nw.props||[];
+    sv(r,0,'Real Estate'); sv(r,1,'Value'); sv(r,2,'Mortgage'); sv(r,3,'Equity'); r++;
+    const reFirstR=r;
+    props.forEach(p=>{
+      sv(r,0,'  '+(p.name||'Property')); sv(r,1,p.val||0,null,YELLOW$); sv(r,2,p.mort||0,null,YELLOW$);
+      sf(r,3,`=B${r+1}-C${r+1}`,(p.val||0)-(p.mort||0),$F); r++;
+    });
+    const reV=props.reduce((s,p)=>s+(p.val||0),0);
+    const reM=props.reduce((s,p)=>s+(p.mort||0),0);
+    const reSubR=r; sv(r,0,'  Total Real Estate');
+    if(props.length){
+      sf(r,1,`=SUM(B${reFirstR+1}:B${r})`,reV,$F);
+      sf(r,2,`=SUM(C${reFirstR+1}:C${r})`,reM,$F);
+      sf(r,3,`=B${r+1}-C${r+1}`,reV-reM,$F);
+    } else { sv(r,1,0,null,YELLOW$); sv(r,2,0,null,YELLOW$); sv(r,3,0,null,YELLOW$); }
+    r++; r++;
+    // Other assets
+    sv(r,0,'Other Assets'); r++;
+    const vehR=r; sv(r,0,'  Vehicles'); sv(r,1,nw.veh||0,null,YELLOW$); r++;
+    const othAR=r; sv(r,0,'  Other');   sv(r,1,nw.oth||0,null,YELLOW$); r++;
+    const othSubR=r; sv(r,0,'  Total Other');
+    sf(r,1,`=B${vehR+1}+B${othAR+1}`,(nw.veh||0)+(nw.oth||0),$F); r++;
+    r++;
+    const totAssR=r; sv(r,0,'TOTAL ASSETS');
+    sf(r,1,`=B${cashSubR+1}+B${invSubR+1}+B${retAccSubR+1}+B${reSubR+1}+B${othSubR+1}`,
+       (nw.chk||0)+(nw.sav||0)+(nw.mkt||0)+(nw.brok||0)+(nw.cry||0)+
+       (nw.k1||0)+(nw.rk||0)+(nw.ir||0)+(nw.ri||0)+(nw.ro||0)+
+       reV+(nw.veh||0)+(nw.oth||0),$F); r++;
+    r++;
+    sv(r,0,'LIABILITIES'); r++;
+    const mortLiabR=r; sv(r,0,'  Mortgage Balances');
+    if(props.length) sf(r,1,`=C${reSubR+1}`,reM,$F); else sv(r,1,0,null,YELLOW$); r++;
+    const cl1R=r; sv(r,0,'  Car Loan 1');    sv(r,1,nw.cl1||0,null,YELLOW$); r++;
+    const cl2R=r; sv(r,0,'  Car Loan 2');    sv(r,1,nw.cl2||0,null,YELLOW$); r++;
+    const ccR=r;  sv(r,0,'  Credit Cards');  sv(r,1,nw.cc||0,null,YELLOW$); r++;
+    const slR=r;  sv(r,0,'  Student Loans'); sv(r,1,nw.sl||0,null,YELLOW$); r++;
+    const odR=r;  sv(r,0,'  Other Debt');    sv(r,1,nw.od||0,null,YELLOW$); r++;
+    const totLiabR=r; sv(r,0,'TOTAL LIABILITIES');
+    sf(r,1,`=B${mortLiabR+1}+B${cl1R+1}+B${cl2R+1}+B${ccR+1}+B${slR+1}+B${odR+1}`,
+       reM+(nw.cl1||0)+(nw.cl2||0)+(nw.cc||0)+(nw.sl||0)+(nw.od||0),$F); r++;
+    r++;
+    sv(r,0,'NET WORTH');
+    sf(r,1,`=B${totAssR+1}-B${totLiabR+1}`,
+       (nw.chk||0)+(nw.sav||0)+(nw.mkt||0)+(nw.brok||0)+(nw.cry||0)+
+       (nw.k1||0)+(nw.rk||0)+(nw.ir||0)+(nw.ri||0)+(nw.ro||0)+
+       reV+(nw.veh||0)+(nw.oth||0)-reM-(nw.cl1||0)-(nw.cl2||0)-(nw.cc||0)-(nw.sl||0)-(nw.od||0),$F);
+    XLSX.utils.book_append_sheet(wb, seal(), 'Net Worth');
+  }
+
+  // ── Sheet 2: Retirement Planning ─────────────────────────────────────────
+  {
+    const {sv,sf,seal} = makeWS();
+    const inp = d.inputs     || {};
+    const ret = d.retirement || {};
+    const acc = d.accumulation || {};
+    const drw = d.drawdown   || {};
+    let r = 0;
+
+    sv(r,0,'RETIREMENT PLANNING'); r++;
+    r++;
+
+    // ── Assumptions block ─────────────────────────────────────────────────
+    sv(r,0,'KEY ASSUMPTIONS'); r++;
+    const ageR=r;     sv(r,0,'Current Age');                  sv(r,1,inp.age||0,null,YELLOW); r++;
+    const retAgeR=r;  sv(r,0,'Target Retirement Age');        sv(r,1,inp.retAge||0,null,YELLOW); r++;
+    sv(r,0,'Years Until Retirement');
+    sf(r,1,`=B${retAgeR+1}-B${ageR+1}`,Math.max(0,(inp.retAge||0)-(inp.age||0))); r++;
+    const rerR=r;     sv(r,0,'Expected Annual Return (%)');   sv(r,1,inp.rer||0,null,YELLOW); r++;
+    const infR=r;     sv(r,0,'Inflation Rate (%)');           sv(r,1,inp.inf||0,null,YELLOW); r++;
+    const rinR=r;     sv(r,0,'Desired Annual Income');        sv(r,1,inp.rin||0,null,YELLOW$); r++;
+    const ansR=r;     sv(r,0,'Annual Retirement Savings');    sv(r,1,inp.ans||0,null,YELLOW$); r++;
+    const annBrokR=r; sv(r,0,'Annual Brokerage Contribution');sv(r,1,inp.annBrok||0,null,YELLOW$); r++;
+    const startEqR=r; sv(r,0,'Starting Equity Portfolio');
+    sv(r,1,Math.round(acc.equity&&acc.equity[0]!=null?acc.equity[0]:0),null,YELLOW$); r++;
+    const startRetR=r; sv(r,0,'Starting Retirement Accounts');
+    sv(r,1,Math.round(acc.retirement&&acc.retirement[0]!=null?acc.retirement[0]:0),null,YELLOW$); r++;
+    const ssR=r;     sv(r,0,'Monthly Social Security'); sv(r,1,inp.ss||0,null,YELLOW$); r++;
+    const ssAgeR=r;  sv(r,0,'SS Start Age');             sv(r,1,inp.ssAge||0,null,YELLOW); r++;
+    const peR=r;     sv(r,0,'Monthly Pension');          sv(r,1,inp.pe||0,null,YELLOW$); r++;
+    const peAgeR=r;  sv(r,0,'Pension Start Age');        sv(r,1,inp.peAge||0,null,YELLOW); r++;
+    const rentalR=r; sv(r,0,'Monthly Rental Income');    sv(r,1,inp.rentalMo||0,null,YELLOW$); r++;
+    r++;
+
+    // ── Portfolio targets ─────────────────────────────────────────────────
+    sv(r,0,'PORTFOLIO TARGETS'); r++;
+    const portNeedR=r; sv(r,0,'Portfolio Income Needed (annual)');
+    sf(r,1,`=MAX(0,B${rinR+1}-B${ssR+1}*12-B${peR+1}*12-B${rentalR+1}*12)`,
+       Math.max(0,(inp.rin||0)-(inp.ss||0)*12-(inp.pe||0)*12-(inp.rentalMo||0)*12),$F); r++;
+    sv(r,0,'Portfolio Target (4% rule)');
+    sf(r,1,`=B${portNeedR+1}/0.04`,ret.portTarget||0,$F); r++;
+    r++;
+
+    // ── Accumulation table (formulas reference assumption cells) ─────────
+    sv(r,0,'ACCUMULATION PROJECTION'); r++;
+    sv(r,0,`Tip: Edit B${rerR+1} (return %), B${annBrokR+1} (brokerage contrib), or B${ansR+1} (retirement savings) above to recalculate.`); r++;
+    sv(r,0,'Age'); sv(r,1,'Equity Portfolio'); sv(r,2,'Retirement Accounts');
+    sv(r,3,'Total Portfolio'); sv(r,4,'Target'); r++;
+
+    const accFirst=r;
+    const accAges=acc.ages||[], accEq=acc.equity||[], accRt=acc.retirement||[], accTot=acc.total||[];
+    if(accAges.length){
+      // Row 0: seed values — reference the assumption cells
+      sv(r,0,accAges[0]);
+      sf(r,1,`=B${startEqR+1}`, Math.round(accEq[0]||0),$F);
+      sf(r,2,`=B${startRetR+1}`, Math.round(accRt[0]||0),$F);
+      sf(r,3,`=B${r+1}+C${r+1}`, Math.round((accEq[0]||0)+(accRt[0]||0)),$F);
+      sv(r,4, Math.round(ret.portTarget||0),$F); r++;
+      // Rows 1+: compound growth formulas
+      for(let i=1; i<accAges.length; i++){
+        const pr=accFirst+i-1;  // previous row (0-indexed)
+        sf(r,0,`=A${pr+1}+1`, accAges[i]);
+        sf(r,1,`=B${pr+1}*(1+$B$${rerR+1}/100)+$B$${annBrokR+1}`, Math.round(accEq[i]||0),$F);
+        sf(r,2,`=C${pr+1}*(1+$B$${rerR+1}/100)+$B$${ansR+1}`,     Math.round(accRt[i]||0),$F);
+        sf(r,3,`=B${r+1}+C${r+1}`, Math.round(accTot[i]||0),$F);
+        sv(r,4, Math.round(ret.portTarget||0),$F); r++;
+      }
+    }
+    r++;
+
+    // ── Drawdown table (equal-split formulas; col E = annual portfolio draw) ─
+    sv(r,0,'DRAWDOWN PROJECTION (retirement to age 85)'); r++;
+    sv(r,0,'Note: Formulas use equal 50/50 split from taxable and retirement accounts. Column E = annual portfolio need.'); r++;
+    sv(r,0,'Age'); sv(r,1,'Taxable Accounts'); sv(r,2,'Retirement Accounts');
+    sv(r,3,'Total Portfolio'); sv(r,4,'Annual Portfolio Draw'); r++;
+
+    const drwFirst=r;
+    const drwAges=drw.ages||[], drwEq=drw.equity||[], drwRt=drw.retirement||[], drwTot=drw.total||[];
+    if(drwAges.length){
+      const pp =ret.ppEquity||0, ppR=ret.ppRet||0;
+      const inf2=(inp.inf||0)/100;
+      const rinV=inp.rin||0, ssV=(inp.ss||0)*12, peV=(inp.pe||0)*12, renV=(inp.rentalMo||0)*12;
+      // Helper: inflation-adjusted annual portfolio need at drawdown year i (0 = retirement year)
+      const aNeedAt=(i)=>{
+        const inflAdj=Math.pow(1+inf2,i);
+        const ssInc=((drwAges[i]||0)>=(inp.ssAge||999)?ssV:0);
+        const peInc=((drwAges[i]||0)>=(inp.peAge||999)?peV:0);
+        return Math.max(0, rinV*inflAdj - ssInc - peInc - renV);
+      };
+      // Column E formula: income need grows by inflation from retirement age
+      // =MAX(0, $B$rin * (1+$B$inf/100)^(Acurr-$B$retAge) - SS - PE - rental)
+      const eFormula=(aCell)=>
+        `=MAX(0,$B$${rinR+1}*(1+$B$${infR+1}/100)^(${aCell}-$B$${retAgeR+1})-IF(${aCell}>=$B$${ssAgeR+1},$B$${ssR+1}*12,0)-IF(${aCell}>=$B$${peAgeR+1},$B$${peR+1}*12,0)-$B$${rentalR+1}*12)`;
+      // First drawdown row: seed balances at retirement
+      sv(r,0, drwAges[0]||inp.retAge||0);
+      sv(r,1, Math.round(pp),$F);
+      sv(r,2, Math.round(ppR),$F);
+      sf(r,3,`=B${r+1}+C${r+1}`, Math.round(pp+ppR),$F);
+      sf(r,4,eFormula(`A${r+1}`), aNeedAt(0),$F);
+      r++;
+      // Rows 1+: draw-down growth formulas (balances decrease by draw, then grow at return rate)
+      for(let i=1; i<drwAges.length; i++){
+        const pd=drwFirst+i-1;  // previous row (0-indexed)
+        sf(r,0,`=A${pd+1}+1`, drwAges[i]);
+        // Equity balance after equal-split draw and growth
+        sf(r,1,`=MAX(0,(B${pd+1}-MIN(B${pd+1},E${pd+1}/2))*(1+$B$${rerR+1}/100))`, Math.round(drwEq[i]||0),$F);
+        // Retirement balance: takes remainder of needed draw
+        sf(r,2,`=MAX(0,(C${pd+1}-MIN(C${pd+1},MAX(0,E${pd+1}-MIN(B${pd+1},E${pd+1}/2))))*(1+$B$${rerR+1}/100))`, Math.round(drwRt[i]||0),$F);
+        sf(r,3,`=B${r+1}+C${r+1}`, Math.round(drwTot[i]||0),$F);
+        sf(r,4,eFormula(`A${r+1}`), aNeedAt(i),$F);
+        r++;
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, seal(), 'Retirement');
+  }
+
+  // ── Sheet 3: College Savings ──────────────────────────────────────────────
+  {
+    const {sv,sf,seal} = makeWS();
+    const college=d.college||[];
+    let r=0;
+    sv(r,0,'COLLEGE SAVINGS PLAN'); r++;
+    sv(r,0,'Generated'); sv(r,1,new Date().toLocaleDateString()); r++;
+    if(!college.length){
+      r++;
+      sv(r,0,'No children added.'); r++;
+    } else {
+      college.forEach(k=>{
+        r++;
+        sv(r,0,(k.name||'Child').toUpperCase()); r++;
+        sv(r,0,'Current Age');            sv(r,1,k.age||0,null,YELLOW); r++;
+        sv(r,0,'Years Until College');    sv(r,1,k.ytc||0,null,YELLOW); r++;
+        sv(r,0,'Current 529 Balance');    sv(r,1,k.bal||0,null,YELLOW$); r++;
+        sv(r,0,'Monthly Contribution');   sv(r,1,k.mo||0,null,YELLOW$); r++;
+        sv(r,0,'Annual Cost (today $)');  sv(r,1,k.annualCost||0,null,YELLOW$); r++;
+        sv(r,0,'Years of College');       sv(r,1,k.yrs||0,null,YELLOW); r++;
+        sv(r,0,'Projected 529 at College'); sv(r,1,Math.round(k.proj||0),$F); r++;
+        sv(r,0,'Projected Total Cost');    sv(r,1,Math.round(k.cost||0),$F); r++;
+        sv(r,0,k.gap>=0?'Surplus':'Shortfall'); sv(r,1,Math.abs(k.gap||0),$F); r++;
+        sv(r,0,'Funding Progress (%)');   sv(r,1,k.pct||0); r++;
+        if(k.gap<0){
+          sv(r,0,'Additional Monthly Savings Needed');
+          sv(r,1,Math.round(Math.abs(k.gap||0)/(Math.max(1,k.ytc)*12)),$F); r++;
+        }
+      });
+    }
+    XLSX.utils.book_append_sheet(wb, seal(), 'College Savings');
+  }
+
+  // ── Sheet 4: Crisis Simulator ─────────────────────────────────────────────
+  {
+    const {sv,sf,seal} = makeWS();
+    let r=0;
+    sv(r,0,'CRISIS SIMULATOR'); r++;
+    if(!selectedCrisis){
+      r++;
+      sv(r,0,'No scenario selected.'); r++;
+    } else {
+      const cr  = CRISES.find(c=>c.key===selectedCrisis);
+      const res = computeCrisisImpact(selectedCrisis);
+      r++;
+      sv(r,0,'Scenario');   sv(r,1,cr?.name||selectedCrisis); r++;
+      sv(r,0,'Risk Level'); sv(r,1,res.riskLevel||''); r++;
+      r++;
+      sv(r,0,'PROJECTIONS'); r++;
+      sv(r,0,'Baseline (without crisis)');  sv(r,1,res.pp_base||0,$F); r++;
+      sv(r,0,'Crisis Projection');          sv(r,1,res.pp_crisis||0,$F); r++;
+      sv(r,0,'Difference');                 sv(r,1,res.diff||0,$F); r++;
+      sv(r,0,'Monthly Income Impact (4%)'); sv(r,1,Math.round((res.diff||0)*0.04/12),$F); r++;
+      sv(r,0,'Portfolio Impact (%)');       sv(r,1,+(res.impactPct||0).toFixed(1)); r++;
+      r++;
+      sv(r,0,'RECOVERY'); r++;
+      sv(r,0,'Years to Recover');       sv(r,1,res.recoveryYrs!=null?res.recoveryYrs:'>50'); r++;
+      sv(r,0,'Years Until Retirement'); sv(r,1,res.yrs||0); r++;
+      r++;
+      sv(r,0,'SCENARIO PARAMETERS'); r++;
+      (CRISIS_PARAMS[selectedCrisis]||[]).forEach(p=>{
+        const el=document.getElementById(p.id);
+        sv(r,0,p.label);
+        const val=el?.value||'';
+        const num=parseFloat(val);
+        if(!isNaN(num)&&val!=='') sv(r,1,num,null,YELLOW); else sv(r,1,val,null,YELLOW);
+        r++;
+      });
+    }
+    XLSX.utils.book_append_sheet(wb, seal(), 'Crisis Simulator');
+  }
+
+  // ── Download ──────────────────────────────────────────────────────────────
+  const name = (d.inputs?.name||'Financial Plan').replace(/[^a-z0-9 ]/gi,'_');
+  XLSX.writeFile(wb, name+'_'+cur+'.xlsx');
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
