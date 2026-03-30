@@ -1743,7 +1743,7 @@ function exportToExcel(){
 
     // ── Drawdown table (equal-split formulas; col E = annual portfolio draw) ─
     sv(r,0,'DRAWDOWN PROJECTION (retirement to age 85)'); r++;
-    sv(r,0,'Note: Formulas use equal 50/50 split from taxable and retirement accounts. Column E = annual portfolio need.'); r++;
+    sv(r,0,'Note: Before age 59.5, draws come from taxable accounts first; if taxable is depleted, retirement accounts cover the shortfall with a 10% IRS early withdrawal penalty (account debited at 1.1×). At 59.5+, draws use an equal 50/50 split. Column E = annual portfolio need.'); r++;
     sv(r,0,'Age'); sv(r,1,'Taxable Accounts'); sv(r,2,'Retirement Accounts');
     sv(r,3,'Total Portfolio'); sv(r,4,'Annual Portfolio Draw'); r++;
 
@@ -1775,10 +1775,10 @@ function exportToExcel(){
       for(let i=1; i<drwAges.length; i++){
         const pd=drwFirst+i-1;  // previous row (0-indexed)
         sf(r,0,`=A${pd+1}+1`, drwAges[i]);
-        // Equity balance after equal-split draw and growth
-        sf(r,1,`=MAX(0,(B${pd+1}-MIN(B${pd+1},E${pd+1}/2))*(1+$B$${rerR+1}/100))`, Math.round(drwEq[i]||0),$F);
-        // Retirement balance: takes remainder of needed draw
-        sf(r,2,`=MAX(0,(C${pd+1}-MIN(C${pd+1},MAX(0,E${pd+1}-MIN(B${pd+1},E${pd+1}/2))))*(1+$B$${rerR+1}/100))`, Math.round(drwRt[i]||0),$F);
+        // Equity balance: before 59.5 draws all needed from taxable (up to balance); at 59.5+ draws half
+        sf(r,1,`=MAX(0,(B${pd+1}-IF(A${r+1}<59.5,MIN(B${pd+1},E${pd+1}),MIN(B${pd+1},E${pd+1}/2)))*(1+$B$${rerR+1}/100))`, Math.round(drwEq[i]||0),$F);
+        // Retirement balance: before 59.5 covers shortfall×1.1 (10% early penalty); at 59.5+ takes remainder after taxable half
+        sf(r,2,`=MAX(0,(C${pd+1}-IF(A${r+1}<59.5,MAX(0,E${pd+1}-B${pd+1})*1.1,MAX(0,E${pd+1}-MIN(B${pd+1},E${pd+1}/2))))*(1+$B$${rerR+1}/100))`, Math.round(drwRt[i]||0),$F);
         sf(r,3,`=B${r+1}+C${r+1}`, Math.round(drwTot[i]||0),$F);
         sf(r,4,eFormula(`A${r+1}`), aNeedAt(i),$F);
         r++;
